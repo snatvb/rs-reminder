@@ -1,11 +1,15 @@
+pub mod add_word;
+pub mod idle;
+
 use async_trait::async_trait;
-use std::error::Error;
+use std::{error::Error, fmt::Debug};
 
 use teloxide::{
     requests::Requester,
     types::{CallbackQuery, ChatId, InlineQuery, Message},
 };
 
+#[derive(Clone, Debug)]
 pub struct FSM {
     pub state: Box<dyn State>,
     pub context: Context,
@@ -57,7 +61,7 @@ impl FSM {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Context {
     pub bot: teloxide::Bot,
     pub chat_id: ChatId,
@@ -72,7 +76,7 @@ impl Context {
 type StateOutput = Result<Box<dyn State>, Box<dyn Error + Send + Sync>>;
 
 #[async_trait]
-pub trait State: Send + Sync {
+pub trait State: Send + Sync + Debug {
     async fn on_enter(&self) {}
 
     async fn handle_message(&mut self, _: &Context, _: Message) -> StateOutput {

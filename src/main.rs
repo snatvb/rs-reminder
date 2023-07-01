@@ -1,4 +1,5 @@
 extern crate dotenv;
+pub mod clients;
 pub mod state;
 use std::{env, error::Error};
 use teloxide::{

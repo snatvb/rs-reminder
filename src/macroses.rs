@@ -26,6 +26,13 @@ macro_rules! key_value_enum {
                 }
             }
 
+            pub fn from_option_key(key: Option<String>) -> Result<Self, &'static str> {
+                match key {
+                    Some(key) => Self::from_key(&key),
+                    None => Err("Invalid key"),
+                }
+            }
+
             #[allow(dead_code)]
             pub fn from_text(text: &str) -> Result<Self, &'static str> {
                 match text {

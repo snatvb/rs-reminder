@@ -30,6 +30,8 @@ key_value_enum! {
         RemoveWord { text: "Remove word", key: "remove_word" },
         ListWords { text: "List words", key: "list_words" },
         Cancel { text: "Cancel", key: "cancel" },
+        PrevPage { text: "←", key: "prev_page" },
+        NextPage { text: "→", key: "next_page" },
     }
 }
 
@@ -41,6 +43,24 @@ impl Button {
     pub fn to_keyboard(&self) -> InlineKeyboardMarkup {
         InlineKeyboardMarkup::new(vec![vec![self.to_inline_button()]])
     }
+}
+
+pub fn make(buttons: &[Vec<Option<Button>>]) -> InlineKeyboardMarkup {
+    let keyboard: Vec<Vec<InlineKeyboardButton>> = buttons
+        .iter()
+        .filter_map(|row| {
+            let result: Vec<InlineKeyboardButton> = row
+                .iter()
+                .flat_map(|button| button.map(|button| button.to_inline_button()))
+                .collect();
+            if result.is_empty() {
+                None
+            } else {
+                Some(result)
+            }
+        })
+        .collect();
+    InlineKeyboardMarkup::new(keyboard)
 }
 
 pub fn words_actions() -> InlineKeyboardMarkup {

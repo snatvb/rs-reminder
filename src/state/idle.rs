@@ -8,7 +8,7 @@ use teloxide::{
 
 use crate::{common::Command, keyboard};
 
-use super::{add_word, error::StateResult, State};
+use super::{add_word, error::StateResult, word_list, State};
 
 #[derive(Clone, Debug)]
 pub struct Idle {}
@@ -82,16 +82,19 @@ impl State for Idle {
         query: teloxide::types::CallbackQuery,
     ) -> StateResult<Box<dyn State>> {
         log::info!("Callback query in IDLE: {:?}", query.data);
-        if let Some(button) = query.data {
-            if let Some(Message { id, chat, .. }) = query.message {
-                ctx.bot
-                    .edit_message_text(chat.id, id, "Write a word for translation")
-                    .reply_markup(keyboard::Button::Cancel.to_keyboard())
-                    .await?;
+        if let Ok(button) = keyboard::Button::from_option_key(query.data) {
+            if button == keyboard::Button::AddWord {
+                if let Some(Message { id, chat, .. }) = query.message {
+                    ctx.bot
+                        .edit_message_text(chat.id, id, "Write a word for translation")
+                        .reply_markup(keyboard::Button::Cancel.to_keyboard())
+                        .await?;
+                }
+                return Ok(Box::new(add_word::AddWord::new()));
             }
 
-            if button == "add_word" {
-                return Ok(Box::new(add_word::AddWord::new()));
+            if button == keyboard::Button::ListWords {
+                return Ok(Box::new(word_list::WordList::default()));
             }
         }
         Ok(self.clone_state())

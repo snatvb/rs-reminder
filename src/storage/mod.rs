@@ -75,5 +75,21 @@ impl Storage {
             .is_some();
         Ok(has_word)
     }
+
+    pub async fn get_words(
+        &self,
+        chat_id: i64,
+        skip: i64,
+        take: i64,
+    ) -> StorageResult<Vec<word::Data>> {
+        let words = self
+            .word()
+            .find_many(vec![word::chat_id::equals(chat_id)])
+            .skip(skip)
+            .take(take)
+            .exec()
+            .await?;
+        Ok(words)
+    }
 }
 /* #endregion */

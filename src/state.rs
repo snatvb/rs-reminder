@@ -2,6 +2,7 @@ pub mod add_translation;
 pub mod add_word;
 pub mod error;
 pub mod idle;
+pub mod word_list;
 
 use async_trait::async_trait;
 use std::{fmt::Debug, sync::Arc};
@@ -33,14 +34,6 @@ impl FSM {
             context: Arc::new(context),
         }
     }
-
-    // pub fn on_enter(&self, from: Option<Box<dyn State>>) -> Pin<Box<dyn Future<Output = ()>>> {
-    //     let state = self.state.lock().unwrap();
-    //     let future = state.on_enter(&self.context, from);
-    //     Box::pin(async move {
-    //         future.await;
-    //     })
-    // }
 
     pub async fn init(&self) -> StateResult<()> {
         log::info!("Init FSM");
@@ -127,7 +120,7 @@ impl FSM {
     }
 
     async fn handle_failure(&self, error: StateError) {
-        log::error!("Error handling message: {}", error);
+        log::error!("Error handling message: {:?}", error);
 
         match error {
             StateError::StorageError(error) => self.handle_storage_error(error).await,

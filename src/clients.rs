@@ -5,7 +5,7 @@ use teloxide::{
     types::{CallbackQuery, ChatId, Message},
 };
 
-use crate::{common::AsyncMutex, prisma, state, storage::Storage};
+use crate::{common::AsyncMutex, state, storage::Storage};
 
 #[derive(Debug, Clone)]
 pub struct Client {

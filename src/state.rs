@@ -12,7 +12,7 @@ use teloxide::{
     types::{CallbackQuery, ChatId, InlineQuery, Message},
 };
 
-use crate::{common::AsyncMutex, prisma, storage::Storage};
+use crate::{common::AsyncMutex, storage::Storage};
 
 use self::error::{StateError, StateResult};
 

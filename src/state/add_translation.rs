@@ -1,8 +1,5 @@
 use async_trait::async_trait;
-use chrono::prelude::*;
 use teloxide::{requests::Requester, types::Message};
-
-use crate::{common::config::TIMINGS, prisma::word};
 
 use super::{error::StateResult, idle, State};
 

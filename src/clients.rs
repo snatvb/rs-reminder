@@ -5,7 +5,7 @@ use teloxide::{
     types::{CallbackQuery, ChatId, Message},
 };
 
-use crate::{common::AsyncMutex, state};
+use crate::{common::AsyncMutex, prisma, state};
 
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -17,13 +17,15 @@ pub struct Client {
 pub struct Clients {
     clients: Arc<AsyncMutex<HashMap<ChatId, Client>>>,
     bot: Arc<teloxide::Bot>,
+    db: Arc<prisma::PrismaClient>,
 }
 
 impl Clients {
-    pub fn new(bot: Arc<teloxide::Bot>) -> Clients {
+    pub fn new(bot: teloxide::Bot, db: prisma::PrismaClient) -> Clients {
         Clients {
             clients: Arc::new(AsyncMutex::new(HashMap::new())),
-            bot,
+            bot: Arc::new(bot),
+            db: Arc::new(db),
         }
     }
 
@@ -40,7 +42,7 @@ impl Clients {
 
         // // Client doesn't exist, create a new one and insert it into the HashMap
         let client = {
-            let context = state::Context::new(bot.clone(), chat_id);
+            let context = state::Context::new(bot.clone(), chat_id, self.db.clone());
             let fsm = state::FSM::new(Box::new(state::idle::Idle::new()), context);
             let new_client = Client {
                 fsm: Arc::from(fsm),

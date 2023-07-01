@@ -3,7 +3,7 @@ pub mod add_word;
 pub mod idle;
 
 use async_trait::async_trait;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 use tokio::sync::MutexGuard;
 
 use teloxide::{
@@ -12,19 +12,19 @@ use teloxide::{
     RequestError,
 };
 
-use crate::common::AsyncMutex;
+use crate::{common::AsyncMutex, prisma};
 
 #[derive(Debug)]
 pub struct FSM {
     pub state: AsyncMutex<Box<dyn State>>,
-    pub context: Context,
+    pub context: Arc<Context>,
 }
 
 impl FSM {
     pub fn new(state: Box<dyn State>, context: Context) -> Self {
         Self {
             state: AsyncMutex::new(state),
-            context,
+            context: Arc::new(context),
         }
     }
 
@@ -123,11 +123,12 @@ impl FSM {
 pub struct Context {
     pub bot: teloxide::Bot,
     pub chat_id: ChatId,
+    pub db: Arc<prisma::PrismaClient>,
 }
 
 impl Context {
-    pub fn new(bot: teloxide::Bot, chat_id: ChatId) -> Self {
-        Self { bot, chat_id }
+    pub fn new(bot: teloxide::Bot, chat_id: ChatId, db: Arc<prisma::PrismaClient>) -> Self {
+        Self { bot, chat_id, db }
     }
 }
 

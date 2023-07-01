@@ -4,7 +4,7 @@ mod common;
 #[allow(warnings)]
 mod prisma;
 mod state;
-use std::{env, sync::Arc};
+use std::env;
 use teloxide::{
     prelude::*,
     types::{
@@ -20,6 +20,10 @@ async fn main() {
 
     pretty_env_logger::init();
 
+    let db = prisma::PrismaClient::_builder()
+        .build()
+        .await
+        .expect("Failed to connect to database");
     let teloxide_token = env::var("TELOXIDE_TOKEN").expect("TELOXIDE_TOKEN must be set.");
     let last5 = &teloxide_token[teloxide_token.len() - 5..];
     log::info!("Starting throw dice bot with token {}...", last5);
@@ -32,7 +36,7 @@ async fn main() {
         .branch(Update::filter_inline_query().endpoint(inline_query_handler));
 
     Dispatcher::builder(bot.clone(), handler)
-        .dependencies(dptree::deps![clients::Clients::new(Arc::from(bot))])
+        .dependencies(dptree::deps![clients::Clients::new(bot, db)])
         .enable_ctrlc_handler()
         .build()
         .dispatch()

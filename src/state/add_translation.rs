@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::prelude::*;
 use teloxide::{
     requests::{Requester, ResponseResult},
     types::Message,
@@ -37,6 +38,16 @@ impl State for AddTranslation {
                     ),
                 )
                 .await?;
+            let chat_id: i64 = ctx.chat_id.0;
+            let now = Utc::now();
+            let in_an_hour = now + chrono::Duration::hours(1);
+            let in_an_hour = in_an_hour.with_timezone(&FixedOffset::east_opt(0).unwrap());
+            ctx.db
+                .word()
+                .create(chat_id, self.word.clone(), translation, in_an_hour, vec![])
+                .exec()
+                .await
+                .unwrap();
             return Ok(Box::new(idle::Idle::new()));
         }
 

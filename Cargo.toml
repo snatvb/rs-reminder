@@ -19,4 +19,5 @@ dotenv = "0.15"
 dotenv_codegen = "0.15"
 async-trait = "0.1.68"
 prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.8" }
+chrono = "0.4.26"
 

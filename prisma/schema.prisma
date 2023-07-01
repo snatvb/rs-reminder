@@ -1,0 +1,31 @@
+datasource db {
+  // could be postgresql or mysql
+  provider = "sqlite"
+  url      = "file:../.database/database.db"
+}
+
+generator client {
+  provider = "cargo prisma"
+  output   = "../src/prisma.rs"
+}
+
+model Word {
+  id            String   @id @default(cuid())
+  chatId        BigInt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  word          String
+  translate     String
+  rememberLevel Int      @default(0)
+  nextRemindAt  DateTime
+  remindedAt    DateTime @default(now())
+  Users         User?    @relation(fields: [usersChatId], references: [chatId])
+  usersChatId   BigInt?
+}
+
+model User {
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chatId    BigInt   @id
+  words     Word[]
+}

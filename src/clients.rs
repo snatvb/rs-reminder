@@ -62,7 +62,6 @@ impl Clients {
         let id = msg.chat.id.to_owned();
         let client = self.get_or_insert(id).await;
         client.fsm.handle_message(msg).await;
-        log::info!("Handled start command for chat_id {}", id);
 
         log::debug!("Message handled");
         Ok(())

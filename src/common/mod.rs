@@ -3,7 +3,7 @@ use teloxide::macros::BotCommands;
 
 pub type AsyncMutex<T> = tokio::sync::Mutex<T>;
 
-#[derive(BotCommands, Clone)]
+#[derive(BotCommands, Clone, Debug)]
 #[command(
     rename_rule = "lowercase",
     description = "These commands are supported:"

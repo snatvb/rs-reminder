@@ -12,10 +12,11 @@ use tokio::sync::MutexGuard;
 use teloxide::{
     requests::Requester,
     types::{CallbackQuery, ChatId, InlineQuery, Message},
+    utils::command::BotCommands,
 };
 
 use crate::{
-    common::AsyncMutex,
+    common::{AsyncMutex, Command},
     keyboard,
     storage::{error::StorageError, Storage},
 };
@@ -46,8 +47,46 @@ impl FSM {
         Ok(())
     }
 
+    async fn parse_command(&self, msg: &Message) -> Option<Command> {
+        if let Some(text) = msg.text() {
+            if let Ok(me) = self.context.bot.get_me().await {
+                return BotCommands::parse(text, me.username()).ok();
+            }
+        }
+        None
+    }
+
+    async fn handle_command(&self, msg: &Message, cmd: Command) -> StateResult<()> {
+        match cmd {
+            Command::Help => {
+                let response = Command::descriptions().to_string();
+                self.context.bot.send_message(msg.chat.id, response).await?;
+            }
+
+            // hard reset to idle state
+            Command::Start => {
+                let current_state = self.state.lock().await;
+                let idle_state = idle::Idle::new();
+                if current_state.name() == idle_state.name() {
+                    current_state.on_enter(&self.context, None).await?;
+                } else {
+                    self.change_state(current_state, Box::new(idle_state)).await;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub async fn handle_message(&self, msg: Message) {
         log::debug!("Handling message: {:?}", msg.text());
+        if let Some(cmd) = self.parse_command(&msg).await {
+            log::debug!("Command: {:?}", cmd);
+            if let Err(error) = self.handle_command(&msg, cmd).await {
+                self.handle_failure(error).await;
+            }
+            return;
+        }
+
         let current_state = self.state.lock().await;
         log::debug!("Current state: {:?}", current_state.name());
         let new_state = current_state.handle_message(&self.context, msg).await;

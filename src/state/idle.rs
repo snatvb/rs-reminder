@@ -1,12 +1,11 @@
 use async_trait::async_trait;
 use teloxide::{
     payloads::{EditMessageTextSetters, SendMessageSetters},
-    requests::{Requester, ResponseResult},
+    requests::Requester,
     types::Message,
-    utils::command::BotCommands,
 };
 
-use crate::{common::Command, keyboard, state::remove_words};
+use crate::{keyboard, state::remove_words};
 
 use super::{
     add_word,
@@ -24,7 +23,7 @@ impl Idle {
 }
 
 impl Idle {
-    async fn send_start_msg(&self, ctx: &super::Context) -> ResponseResult<()> {
+    async fn send_start_msg(&self, ctx: &super::Context) -> StateResult<()> {
         ctx.bot
             .send_message(ctx.chat_id, "Chose action")
             .reply_markup(keyboard::words_actions())
@@ -36,48 +35,10 @@ impl Idle {
 
 #[async_trait]
 impl State for Idle {
-    async fn on_enter(
-        &self,
-        ctx: &super::Context,
-        from: Option<Box<dyn State>>,
-    ) -> StateResult<()> {
+    async fn on_enter(&self, ctx: &super::Context, _: Option<Box<dyn State>>) -> StateResult<()> {
         log::debug!("Entered {} state", self.name());
-        if let Some(from) = from {
-            log::debug!("From: {}", from.name());
-            self.send_start_msg(ctx).await?;
-        }
-
+        self.send_start_msg(ctx).await?;
         Ok(())
-    }
-
-    async fn handle_message(
-        &self,
-        ctx: &super::Context,
-        msg: Message,
-    ) -> StateResult<Box<dyn State>> {
-        let me = ctx.bot.get_me().await?;
-        if let Some(text) = msg.text() {
-            match BotCommands::parse(text, me.username()) {
-                Ok(Command::Help) => {
-                    // Just send the description of all commands.
-                    ctx.bot
-                        .send_message(msg.chat.id, Command::descriptions().to_string())
-                        .await?;
-                }
-
-                Ok(Command::Start) => {
-                    self.send_start_msg(ctx).await?;
-                }
-
-                Err(_) => {
-                    ctx.bot
-                        .send_message(msg.chat.id, "Command not found!")
-                        .await?;
-                }
-            }
-        }
-
-        Ok(self.clone_state())
     }
 
     async fn handle_callback_query(

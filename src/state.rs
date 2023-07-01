@@ -1,5 +1,6 @@
 pub mod add_translation;
 pub mod add_word;
+pub mod error;
 pub mod idle;
 
 use async_trait::async_trait;
@@ -7,12 +8,13 @@ use std::{fmt::Debug, sync::Arc};
 use tokio::sync::MutexGuard;
 
 use teloxide::{
-    requests::{Requester, ResponseResult},
+    requests::Requester,
     types::{CallbackQuery, ChatId, InlineQuery, Message},
-    RequestError,
 };
 
 use crate::{common::AsyncMutex, prisma};
+
+use self::error::{StateError, StateResult};
 
 #[derive(Debug)]
 pub struct FSM {
@@ -36,7 +38,7 @@ impl FSM {
     //     })
     // }
 
-    pub async fn init(&self) -> ResponseResult<()> {
+    pub async fn init(&self) -> StateResult<()> {
         log::info!("Init FSM");
         log::debug!("Lock state");
         let state = &self.state.lock().await;
@@ -87,7 +89,7 @@ impl FSM {
 
     async fn handle_translate(
         &self,
-        new_state: Result<Box<dyn State>, RequestError>,
+        new_state: StateResult<Box<dyn State>>,
         current_state: MutexGuard<'_, Box<dyn State>>,
     ) {
         if let Err(error) = new_state {
@@ -108,7 +110,7 @@ impl FSM {
     //     };
     // }
 
-    async fn handle_failure(&self, error: RequestError) -> Box<dyn State> {
+    async fn handle_failure(&self, error: StateError) -> Box<dyn State> {
         log::error!("Error handling message: {}", error);
         let _ = self
             .context
@@ -138,11 +140,11 @@ pub trait State: Send + Sync + Debug {
         std::any::type_name::<Self>()
     }
 
-    async fn on_enter(&self, _: &Context, _: Option<Box<dyn State>>) -> ResponseResult<()> {
+    async fn on_enter(&self, _: &Context, _: Option<Box<dyn State>>) -> StateResult<()> {
         Ok(())
     }
 
-    async fn handle_message(&self, _: &Context, _: Message) -> ResponseResult<Box<dyn State>> {
+    async fn handle_message(&self, _: &Context, _: Message) -> StateResult<Box<dyn State>> {
         Ok(self.clone_state())
     }
 
@@ -150,7 +152,7 @@ pub trait State: Send + Sync + Debug {
         &self,
         _: &Context,
         _: CallbackQuery,
-    ) -> ResponseResult<Box<dyn State>> {
+    ) -> StateResult<Box<dyn State>> {
         Ok(self.clone_state())
     }
 
@@ -158,7 +160,7 @@ pub trait State: Send + Sync + Debug {
         &self,
         _: &Context,
         _: InlineQuery,
-    ) -> ResponseResult<Box<dyn State>> {
+    ) -> StateResult<Box<dyn State>> {
         Ok(self.clone_state())
     }
 

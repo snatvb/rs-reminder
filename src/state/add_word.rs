@@ -1,10 +1,7 @@
 use async_trait::async_trait;
-use teloxide::{
-    requests::{Requester, ResponseResult},
-    types::Message,
-};
+use teloxide::{requests::Requester, types::Message};
 
-use super::{add_translation, State};
+use super::{add_translation, error::StateResult, State};
 
 #[derive(Clone, Debug)]
 pub struct AddWord {}
@@ -17,7 +14,7 @@ impl AddWord {
 
 #[async_trait]
 impl State for AddWord {
-    async fn on_enter(&self, _: &super::Context, _: Option<Box<dyn State>>) -> ResponseResult<()> {
+    async fn on_enter(&self, _: &super::Context, _: Option<Box<dyn State>>) -> StateResult<()> {
         log::info!("Entered AddWord state");
 
         Ok(())
@@ -27,7 +24,7 @@ impl State for AddWord {
         &self,
         ctx: &super::Context,
         msg: Message,
-    ) -> ResponseResult<Box<dyn State>> {
+    ) -> StateResult<Box<dyn State>> {
         if let Some(text) = msg.text() {
             let word = text.to_owned();
             ctx.bot

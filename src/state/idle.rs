@@ -8,7 +8,7 @@ use teloxide::{
 
 use crate::common::Command;
 
-use super::{add_word, State};
+use super::{add_word, error::StateResult, State};
 
 #[derive(Clone, Debug)]
 pub struct Idle {}
@@ -36,7 +36,7 @@ impl State for Idle {
         &self,
         ctx: &super::Context,
         from: Option<Box<dyn State>>,
-    ) -> ResponseResult<()> {
+    ) -> StateResult<()> {
         log::debug!("Entered {} state", self.name());
         if let Some(from) = from {
             log::debug!("From: {}", from.name());
@@ -50,7 +50,7 @@ impl State for Idle {
         &self,
         ctx: &super::Context,
         msg: Message,
-    ) -> ResponseResult<Box<dyn State>> {
+    ) -> StateResult<Box<dyn State>> {
         let me = ctx.bot.get_me().await?;
         if let Some(text) = msg.text() {
             match BotCommands::parse(text, me.username()) {
@@ -80,7 +80,7 @@ impl State for Idle {
         &self,
         ctx: &super::Context,
         query: teloxide::types::CallbackQuery,
-    ) -> ResponseResult<Box<dyn State>> {
+    ) -> StateResult<Box<dyn State>> {
         log::info!("Callback query in IDLE: {:?}", query.data);
         if let Some(button) = query.data {
             if let Some(Message { id, chat, .. }) = query.message {

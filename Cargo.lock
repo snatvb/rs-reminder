@@ -3642,6 +3642,7 @@ dependencies = [
  "prisma-client-rust",
  "serde",
  "teloxide",
+ "thiserror",
  "tokio",
 ]
 

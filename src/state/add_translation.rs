@@ -1,13 +1,10 @@
 use async_trait::async_trait;
 use chrono::prelude::*;
-use teloxide::{
-    requests::{Requester, ResponseResult},
-    types::Message,
-};
+use teloxide::{requests::Requester, types::Message};
 
 use crate::common::config::TIMINGS;
 
-use super::{idle, State};
+use super::{error::StateResult, idle, State};
 
 #[derive(Debug, Clone)]
 pub struct AddTranslation {
@@ -28,7 +25,7 @@ impl State for AddTranslation {
         &self,
         ctx: &super::Context,
         msg: Message,
-    ) -> ResponseResult<Box<dyn State>> {
+    ) -> StateResult<Box<dyn State>> {
         if let Some(text) = msg.text() {
             let translation = text.to_owned();
             let chat_id: i64 = ctx.chat_id.0;
@@ -47,8 +44,7 @@ impl State for AddTranslation {
                     vec![],
                 )
                 .exec()
-                .await
-                .unwrap();
+                .await?;
             ctx.bot
                 .send_message(
                     msg.chat.id,

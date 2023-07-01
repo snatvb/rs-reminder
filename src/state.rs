@@ -12,7 +12,7 @@ use teloxide::{
     types::{CallbackQuery, ChatId, InlineQuery, Message},
 };
 
-use crate::{common::AsyncMutex, prisma};
+use crate::{common::AsyncMutex, prisma, storage::Storage};
 
 use self::error::{StateError, StateResult};
 
@@ -125,11 +125,11 @@ impl FSM {
 pub struct Context {
     pub bot: teloxide::Bot,
     pub chat_id: ChatId,
-    pub db: Arc<prisma::PrismaClient>,
+    pub db: Arc<Storage>,
 }
 
 impl Context {
-    pub fn new(bot: teloxide::Bot, chat_id: ChatId, db: Arc<prisma::PrismaClient>) -> Self {
+    pub fn new(bot: teloxide::Bot, chat_id: ChatId, db: Arc<Storage>) -> Self {
         Self { bot, chat_id, db }
     }
 }

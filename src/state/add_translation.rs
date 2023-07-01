@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use chrono::prelude::*;
 use teloxide::{requests::Requester, types::Message};
 
-use crate::common::config::TIMINGS;
+use crate::{common::config::TIMINGS, prisma::word};
 
 use super::{error::StateResult, idle, State};
 
@@ -27,24 +27,7 @@ impl State for AddTranslation {
         msg: Message,
     ) -> StateResult<Box<dyn State>> {
         if let Some(text) = msg.text() {
-            let translation = text.to_owned();
-            let chat_id: i64 = ctx.chat_id.0;
-            let now = Utc::now();
-            let first_remind =
-                now + chrono::Duration::hours(TIMINGS.get(&0i32).unwrap().to_owned());
-            let first_remind = first_remind.with_timezone(&FixedOffset::east_opt(0).unwrap());
-            let word = ctx
-                .db
-                .word()
-                .create(
-                    chat_id,
-                    self.word.clone(),
-                    translation,
-                    first_remind,
-                    vec![],
-                )
-                .exec()
-                .await?;
+            let word = ctx.db.new_word(ctx.chat_id.0, &self.word, text).await?;
             ctx.bot
                 .send_message(
                     msg.chat.id,

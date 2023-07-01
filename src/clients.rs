@@ -5,7 +5,7 @@ use teloxide::{
     types::{CallbackQuery, ChatId, Message},
 };
 
-use crate::{common::AsyncMutex, prisma, state};
+use crate::{common::AsyncMutex, prisma, state, storage::Storage};
 
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -17,11 +17,11 @@ pub struct Client {
 pub struct Clients {
     clients: Arc<AsyncMutex<HashMap<ChatId, Client>>>,
     bot: Arc<teloxide::Bot>,
-    db: Arc<prisma::PrismaClient>,
+    db: Arc<Storage>,
 }
 
 impl Clients {
-    pub fn new(bot: teloxide::Bot, db: prisma::PrismaClient) -> Clients {
+    pub fn new(bot: teloxide::Bot, db: Storage) -> Clients {
         Clients {
             clients: Arc::new(AsyncMutex::new(HashMap::new())),
             bot: Arc::new(bot),

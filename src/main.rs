@@ -4,6 +4,7 @@ mod common;
 #[allow(warnings)]
 mod prisma;
 mod state;
+mod storage;
 use std::env;
 use teloxide::{
     prelude::*,
@@ -12,6 +13,8 @@ use teloxide::{
         InputMessageContentText,
     },
 };
+
+use crate::storage::Storage;
 
 #[tokio::main]
 async fn main() {
@@ -36,7 +39,7 @@ async fn main() {
         .branch(Update::filter_inline_query().endpoint(inline_query_handler));
 
     Dispatcher::builder(bot.clone(), handler)
-        .dependencies(dptree::deps![clients::Clients::new(bot, db)])
+        .dependencies(dptree::deps![clients::Clients::new(bot, Storage::new(db))])
         .enable_ctrlc_handler()
         .build()
         .dispatch()

@@ -3638,6 +3638,7 @@ dependencies = [
  "dotenv",
  "dotenv_codegen",
  "log",
+ "num",
  "phf",
  "pretty_env_logger",
  "prisma-client-rust",

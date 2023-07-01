@@ -83,18 +83,17 @@ impl State for Idle {
     ) -> StateResult<Box<dyn State>> {
         log::info!("Callback query in IDLE: {:?}", query.data);
         if let Ok(button) = keyboard::Button::from_option_key(query.data) {
-            if button == keyboard::Button::AddWord {
-                if let Some(Message { id, chat, .. }) = query.message {
+            if let Some(Message { id, chat, .. }) = query.message {
+                if button == keyboard::Button::AddWord {
                     ctx.bot
                         .edit_message_text(chat.id, id, "Write a word for translation")
                         .reply_markup(keyboard::Button::Cancel.to_keyboard())
                         .await?;
+                    return Ok(Box::new(add_word::AddWord::new()));
                 }
-                return Ok(Box::new(add_word::AddWord::new()));
-            }
-
-            if button == keyboard::Button::ListWords {
-                return Ok(Box::new(word_list::WordList::default()));
+                if button == keyboard::Button::ListWords {
+                    return Ok(Box::new(word_list::WordList::new(Some(id), 0)));
+                }
             }
         }
         Ok(self.clone_state())

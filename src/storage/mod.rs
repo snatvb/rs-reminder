@@ -91,5 +91,14 @@ impl Storage {
             .await?;
         Ok(words)
     }
+
+    pub async fn words_count(&self, chat_id: i64) -> StorageResult<i64> {
+        let count = self
+            .word()
+            .count(vec![word::chat_id::equals(chat_id)])
+            .exec()
+            .await?;
+        Ok(count)
+    }
 }
 /* #endregion */

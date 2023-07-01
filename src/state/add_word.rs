@@ -1,7 +1,10 @@
 use async_trait::async_trait;
-use teloxide::requests::ResponseResult;
+use teloxide::{
+    requests::{Requester, ResponseResult},
+    types::Message,
+};
 
-use super::State;
+use super::{add_translation, State};
 
 #[derive(Clone, Debug)]
 pub struct AddWord {}
@@ -18,6 +21,22 @@ impl State for AddWord {
         log::info!("Entered AddWord state");
 
         Ok(())
+    }
+
+    async fn handle_message(
+        &self,
+        ctx: &super::Context,
+        msg: Message,
+    ) -> ResponseResult<Box<dyn State>> {
+        if let Some(text) = msg.text() {
+            let word = text.to_owned();
+            ctx.bot
+                .send_message(msg.chat.id, "Enter translation")
+                .await?;
+            return Ok(Box::new(add_translation::AddTranslation::new(&word)));
+        }
+
+        Ok(self.clone_state())
     }
 
     fn clone_state(&self) -> Box<dyn State> {

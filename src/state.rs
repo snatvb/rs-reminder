@@ -1,3 +1,4 @@
+pub mod add_translation;
 pub mod add_word;
 pub mod idle;
 

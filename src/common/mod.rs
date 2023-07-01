@@ -1,3 +1,4 @@
+pub mod config;
 use teloxide::macros::BotCommands;
 
 pub type AsyncMutex<T> = tokio::sync::Mutex<T>;

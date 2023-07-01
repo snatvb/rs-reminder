@@ -5,6 +5,8 @@ use teloxide::{
     types::Message,
 };
 
+use crate::common::config::TIMINGS;
+
 use super::{idle, State};
 
 #[derive(Debug, Clone)]
@@ -29,25 +31,33 @@ impl State for AddTranslation {
     ) -> ResponseResult<Box<dyn State>> {
         if let Some(text) = msg.text() {
             let translation = text.to_owned();
+            let chat_id: i64 = ctx.chat_id.0;
+            let now = Utc::now();
+            let first_remind =
+                now + chrono::Duration::hours(TIMINGS.get(&0i32).unwrap().to_owned());
+            let first_remind = first_remind.with_timezone(&FixedOffset::east_opt(0).unwrap());
+            let word = ctx
+                .db
+                .word()
+                .create(
+                    chat_id,
+                    self.word.clone(),
+                    translation,
+                    first_remind,
+                    vec![],
+                )
+                .exec()
+                .await
+                .unwrap();
             ctx.bot
                 .send_message(
                     msg.chat.id,
                     format!(
                         "Good {} with translation {} has been added",
-                        self.word, translation
+                        word.word, word.translate
                     ),
                 )
                 .await?;
-            let chat_id: i64 = ctx.chat_id.0;
-            let now = Utc::now();
-            let in_an_hour = now + chrono::Duration::hours(1);
-            let in_an_hour = in_an_hour.with_timezone(&FixedOffset::east_opt(0).unwrap());
-            ctx.db
-                .word()
-                .create(chat_id, self.word.clone(), translation, in_an_hour, vec![])
-                .exec()
-                .await
-                .unwrap();
             return Ok(Box::new(idle::Idle::new()));
         }
 

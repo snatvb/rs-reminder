@@ -1,7 +1,9 @@
 extern crate dotenv;
-pub mod clients;
+mod clients;
 mod common;
-pub mod state;
+#[allow(warnings)]
+mod prisma;
+mod state;
 use std::{env, sync::Arc};
 use teloxide::{
     prelude::*,

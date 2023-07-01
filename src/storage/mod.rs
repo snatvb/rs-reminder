@@ -42,17 +42,7 @@ impl Storage {
         word: &str,
         translation: &str,
     ) -> StorageResult<word::Data> {
-        let has_word = self
-            .word()
-            .find_first(vec![
-                word::word::equals(word.to_owned()),
-                word::chat_id::equals(chat_id),
-            ])
-            .exec()
-            .await?
-            .is_some();
-
-        if has_word {
+        if self.has_word(chat_id, word).await? {
             return Err(StorageError::WordAlreadyExists);
         }
 
@@ -71,6 +61,19 @@ impl Storage {
             .exec()
             .await?;
         Ok(word)
+    }
+
+    pub async fn has_word(&self, chat_id: i64, word: &str) -> StorageResult<bool> {
+        let has_word = self
+            .word()
+            .find_first(vec![
+                word::word::equals(word.to_owned()),
+                word::chat_id::equals(chat_id),
+            ])
+            .exec()
+            .await?
+            .is_some();
+        Ok(has_word)
     }
 }
 /* #endregion */

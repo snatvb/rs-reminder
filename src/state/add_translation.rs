@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use teloxide::{requests::Requester, types::Message};
+use teloxide::{payloads::SendMessageSetters, requests::Requester, types::Message};
+
+use crate::keyboard;
 
 use super::{error::StateResult, idle, State};
 
@@ -33,6 +35,7 @@ impl State for AddTranslation {
                         word.word, word.translate
                     ),
                 )
+                .reply_markup(keyboard::Button::Cancel.to_keyboard())
                 .await?;
             return Ok(Box::new(idle::Idle::new()));
         }

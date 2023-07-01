@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use teloxide::{
-    payloads::SendMessageSetters,
+    payloads::{EditMessageTextSetters, SendMessageSetters},
     requests::{Requester, ResponseResult},
-    types::{InlineKeyboardButton, InlineKeyboardMarkup, Message},
+    types::Message,
     utils::command::BotCommands,
 };
 
-use crate::common::Command;
+use crate::{common::Command, keyboard};
 
 use super::{add_word, error::StateResult, State};
 
@@ -23,7 +23,7 @@ impl Idle {
     async fn send_start_msg(&self, ctx: &super::Context) -> ResponseResult<()> {
         ctx.bot
             .send_message(ctx.chat_id, "Chose action")
-            .reply_markup(make_keyboard())
+            .reply_markup(keyboard::words_actions())
             .await?;
 
         Ok(())
@@ -86,6 +86,7 @@ impl State for Idle {
             if let Some(Message { id, chat, .. }) = query.message {
                 ctx.bot
                     .edit_message_text(chat.id, id, "Write a word for translation")
+                    .reply_markup(keyboard::Button::Cancel.to_keyboard())
                     .await?;
             }
 
@@ -99,19 +100,4 @@ impl State for Idle {
     fn clone_state(&self) -> Box<dyn State> {
         Box::new(self.clone())
     }
-}
-
-fn make_keyboard() -> InlineKeyboardMarkup {
-    let keyboard: Vec<Vec<InlineKeyboardButton>> = vec![
-        vec![
-            InlineKeyboardButton::callback("Add word".to_owned(), "add_word".to_owned()),
-            InlineKeyboardButton::callback("Remove word".to_owned(), "remove_word".to_owned()),
-        ],
-        vec![InlineKeyboardButton::callback(
-            "List words".to_owned(),
-            "list_words".to_owned(),
-        )],
-    ];
-
-    InlineKeyboardMarkup::new(keyboard)
 }

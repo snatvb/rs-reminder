@@ -1,6 +1,9 @@
+extern crate derive_more;
 extern crate dotenv;
 mod clients;
 mod common;
+mod keyboard;
+mod macroses;
 #[allow(warnings)]
 mod prisma;
 mod state;

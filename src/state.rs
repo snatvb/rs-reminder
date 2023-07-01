@@ -14,6 +14,7 @@ use teloxide::{
 
 use crate::{
     common::AsyncMutex,
+    keyboard,
     storage::{error::StorageError, Storage},
 };
 
@@ -82,10 +83,30 @@ impl FSM {
 
     pub async fn handle_callback_query(&self, callback_query: CallbackQuery) {
         let current_state = self.state.lock().await;
+        if self.is_cancel_cmd(&callback_query) {
+            self.handle_translate(Ok(Box::new(idle::Idle::new())), current_state)
+                .await;
+            if let Some(Message { id, chat, .. }) = callback_query.message {
+                let _ = self.context.bot.delete_message(chat.id, id).await;
+            }
+            return;
+        };
+
         let new_state = current_state
             .handle_callback_query(&self.context, callback_query)
             .await;
         self.handle_translate(new_state, current_state).await;
+    }
+
+    fn is_cancel_cmd(&self, query: &CallbackQuery) -> bool {
+        if let Some(Ok(cmd)) = query
+            .data
+            .to_owned()
+            .map(|text| keyboard::Button::from_key(&text))
+        {
+            return cmd == keyboard::Button::Cancel;
+        }
+        return false;
     }
 
     async fn handle_translate(

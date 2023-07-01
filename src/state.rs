@@ -51,10 +51,10 @@ impl FSM {
         let current_state = self.state.lock().await;
         log::debug!("Current state: {:?}", current_state.name());
         let new_state = current_state.handle_message(&self.context, msg).await;
-        self.handle_translate(new_state, current_state).await;
+        self.handle_new_state(new_state, current_state).await;
     }
 
-    async fn translate(
+    async fn change_state(
         &self,
         mut current_state: MutexGuard<'_, Box<dyn State>>,
         new_state: Box<dyn State>,
@@ -78,7 +78,7 @@ impl FSM {
     pub async fn handle_callback_query(&self, callback_query: CallbackQuery) {
         let current_state = self.state.lock().await;
         if self.is_cancel_cmd(&callback_query) {
-            self.handle_translate(Ok(Box::new(idle::Idle::new())), current_state)
+            self.handle_new_state(Ok(Box::new(idle::Idle::new())), current_state)
                 .await;
             if let Some(Message { id, chat, .. }) = callback_query.message {
                 let _ = self.context.bot.delete_message(chat.id, id).await;
@@ -89,7 +89,7 @@ impl FSM {
         let new_state = current_state
             .handle_callback_query(&self.context, callback_query)
             .await;
-        self.handle_translate(new_state, current_state).await;
+        self.handle_new_state(new_state, current_state).await;
     }
 
     fn is_cancel_cmd(&self, query: &CallbackQuery) -> bool {
@@ -103,18 +103,18 @@ impl FSM {
         return false;
     }
 
-    async fn handle_translate(
+    async fn handle_new_state(
         &self,
         new_state: StateResult<Box<dyn State>>,
         current_state: MutexGuard<'_, Box<dyn State>>,
     ) {
         match new_state {
-            Ok(state) => self.translate(current_state, state).await,
+            Ok(state) => self.change_state(current_state, state).await,
             Err(error) => {
                 self.handle_failure(error).await;
                 let idle_state = Box::new(idle::Idle::new());
                 if current_state.name() != idle_state.name() {
-                    self.translate(current_state, idle_state).await;
+                    self.change_state(current_state, idle_state).await;
                 }
             }
         }

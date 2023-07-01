@@ -1,12 +1,15 @@
-use prisma_client_rust::QueryError;
 use thiserror::Error;
+
+use crate::storage::error::StorageError;
 
 #[derive(Error, Debug)]
 pub enum StateError {
-    #[error("Database query error")]
-    DatabaseQueryError(#[from] QueryError),
+    #[error("Storage error")]
+    StorageError(#[from] StorageError),
     #[error("Request bot error")]
     RequestError(#[from] teloxide::RequestError),
+    #[error("Word already exists")]
+    WordAlreadyExists,
 }
 
 pub type StateResult<T> = std::result::Result<T, StateError>;

@@ -12,7 +12,10 @@ use teloxide::{
     types::{CallbackQuery, ChatId, InlineQuery, Message},
 };
 
-use crate::{common::AsyncMutex, storage::Storage};
+use crate::{
+    common::AsyncMutex,
+    storage::{error::StorageError, Storage},
+};
 
 use self::error::{StateError, StateResult};
 
@@ -50,9 +53,7 @@ impl FSM {
 
     pub async fn handle_message(&self, msg: Message) {
         log::debug!("Handling message: {:?}", msg.text());
-        log::debug!("Lock state");
         let current_state = self.state.lock().await;
-        log::debug!("Locked state");
         log::debug!("Current state: {:?}", current_state.name());
         let new_state = current_state.handle_message(&self.context, msg).await;
         self.handle_translate(new_state, current_state).await;
@@ -92,32 +93,46 @@ impl FSM {
         new_state: StateResult<Box<dyn State>>,
         current_state: MutexGuard<'_, Box<dyn State>>,
     ) {
-        if let Err(error) = new_state {
-            self.handle_failure(error).await;
-        } else {
-            self.translate(current_state, new_state.unwrap()).await;
+        match new_state {
+            Ok(state) => self.translate(current_state, state).await,
+            Err(error) => {
+                self.handle_failure(error).await;
+                let idle_state = Box::new(idle::Idle::new());
+                if current_state.name() != idle_state.name() {
+                    self.translate(current_state, idle_state).await;
+                }
+            }
         }
     }
 
-    // pub async fn handle_inline_query(&mut self, inline_query: InlineQuery) {
-    //     let handled = self
-    //         .state
-    //         .handle_inline_query(self.context.clone(), inline_query)
-    //         .await;
-    //     self.state = match handled {
-    //         Ok(state) => state,
-    //         Err(error) => self.handle_failure(error).await,
-    //     };
-    // }
-
-    async fn handle_failure(&self, error: StateError) -> Box<dyn State> {
+    async fn handle_failure(&self, error: StateError) {
         log::error!("Error handling message: {}", error);
+
+        match error {
+            StateError::StorageError(error) => self.handle_storage_error(error).await,
+            _ => self.answer_smt_went_wrong().await,
+        }
+    }
+
+    async fn handle_storage_error(&self, error: StorageError) {
+        match error {
+            StorageError::WordAlreadyExists => {
+                let _ = self
+                    .context
+                    .bot
+                    .send_message(self.context.chat_id, "Word already exists")
+                    .await;
+            }
+            _ => self.answer_smt_went_wrong().await,
+        }
+    }
+
+    async fn answer_smt_went_wrong(&self) {
         let _ = self
             .context
             .bot
             .send_message(self.context.chat_id, "Something went wrong...")
             .await;
-        self.state.lock().await.clone()
     }
 }
 

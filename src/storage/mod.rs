@@ -100,5 +100,16 @@ impl Storage {
             .await?;
         Ok(count)
     }
+
+    pub async fn remove_word(&self, chat_id: i64, word: &str) -> StorageResult<()> {
+        self.word()
+            .delete_many(vec![
+                word::word::equals(word.to_owned()),
+                word::chat_id::equals(chat_id),
+            ])
+            .exec()
+            .await?;
+        Ok(())
+    }
 }
 /* #endregion */

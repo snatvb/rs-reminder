@@ -12,13 +12,13 @@ use super::{
     State,
 };
 
+pub static WORDS_PER_PAGE: i64 = 5;
+
 #[derive(Clone, Debug, Default)]
 pub struct WordList {
     message_id: Option<MessageId>,
     offset: i64,
 }
-
-pub static WORDS_PER_PAGE: i64 = 5;
 
 impl WordList {
     pub fn new(message_id: Option<MessageId>, offset: i64) -> WordList {

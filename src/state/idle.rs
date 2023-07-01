@@ -6,9 +6,13 @@ use teloxide::{
     utils::command::BotCommands,
 };
 
-use crate::{common::Command, keyboard};
+use crate::{common::Command, keyboard, state::remove_words};
 
-use super::{add_word, error::StateResult, word_list, State};
+use super::{
+    add_word,
+    error::{StateError, StateResult},
+    word_list, State,
+};
 
 #[derive(Clone, Debug)]
 pub struct Idle {}
@@ -81,18 +85,33 @@ impl State for Idle {
         ctx: &super::Context,
         query: teloxide::types::CallbackQuery,
     ) -> StateResult<Box<dyn State>> {
-        log::info!("Callback query in IDLE: {:?}", query.data);
-        if let Ok(button) = keyboard::Button::from_option_key(query.data) {
-            if let Some(Message { id, chat, .. }) = query.message {
-                if button == keyboard::Button::AddWord {
+        log::info!("Callback query in {}: {:?}", self.name(), query.data);
+        let request = (keyboard::Button::from_option_key(query.data), query.message);
+        if let (Ok(button), Some(Message { id, chat, .. })) = request {
+            match button {
+                keyboard::Button::AddWord => {
                     ctx.bot
                         .edit_message_text(chat.id, id, "Write a word for translation")
                         .reply_markup(keyboard::Button::Cancel.to_keyboard())
                         .await?;
                     return Ok(Box::new(add_word::AddWord::new()));
                 }
-                if button == keyboard::Button::ListWords {
+                keyboard::Button::ListWords => {
                     return Ok(Box::new(word_list::WordList::new(Some(id), 0)));
+                }
+                keyboard::Button::RemoveWord => {
+                    ctx.bot
+                        .edit_message_text(chat.id, id, "Write a word for removing")
+                        .reply_markup(keyboard::Button::Cancel.to_keyboard())
+                        .await?;
+                    return Ok(Box::new(remove_words::RemoveWords::new()));
+                }
+                _ => {
+                    return Err(StateError::UnexpectedCommand(format!(
+                        "Unexpected command: {} - {}",
+                        button.key(),
+                        button.text()
+                    )));
                 }
             }
         }

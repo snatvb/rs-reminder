@@ -2,6 +2,7 @@ pub mod add_translation;
 pub mod add_word;
 pub mod error;
 pub mod idle;
+pub mod remove_words;
 pub mod word_list;
 
 use async_trait::async_trait;

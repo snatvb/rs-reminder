@@ -6,6 +6,7 @@ mod keyboard;
 mod macroses;
 #[allow(warnings)]
 mod prisma;
+mod reminder;
 mod state;
 mod storage;
 use std::env;
@@ -20,7 +21,7 @@ use teloxide::{
 use crate::storage::Storage;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), String> {
     println!("Starting bot...");
     load_env();
 
@@ -41,12 +42,21 @@ async fn main() {
         .branch(Update::filter_callback_query().endpoint(callback_handler))
         .branch(Update::filter_inline_query().endpoint(inline_query_handler));
 
-    Dispatcher::builder(bot.clone(), handler)
-        .dependencies(dptree::deps![clients::Clients::new(bot, Storage::new(db))])
-        .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
+    let users = clients::Clients::new(bot.clone(), Storage::new(db));
+    let mut reminder = reminder::Reminder::new(users.clone());
+    let reminder_task = tokio::spawn(async move {
+        reminder.run().await;
+    });
+    let dispatcher_task = tokio::spawn(async move {
+        Dispatcher::builder(bot, handler)
+            .dependencies(dptree::deps![users])
+            .enable_ctrlc_handler()
+            .build()
+            .dispatch()
+            .await;
+    });
+    tokio::try_join!(reminder_task, dispatcher_task).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 async fn inline_query_handler(bot: Bot, q: InlineQuery) -> ResponseResult<()> {
@@ -62,32 +72,6 @@ async fn inline_query_handler(bot: Bot, q: InlineQuery) -> ResponseResult<()> {
     Ok(())
 }
 
-/// When it receives a callback from a button it edits the message with all
-/// those buttons writing a text with the selected Debian version.
-///
-/// **IMPORTANT**: do not send privacy-sensitive data this way!!!
-/// Anyone can read data stored in the callback button.
-// async fn callback_handler(bot: Bot, q: CallbackQuery) -> ResponseResult<()> {
-//     if let Some(version) = q.data {
-//         let text = format!("You chose: {version}");
-
-//         // Tell telegram that we've seen this query, to remove 🕑 icons from the
-//         // clients. You could also use `answer_callback_query`'s optional
-//         // parameters to tweak what happens on the client side.
-//         bot.answer_callback_query(q.id).await?;
-
-//         // Edit text of the message to which the buttons were attached
-//         if let Some(Message { id, chat, .. }) = q.message {
-//             bot.edit_message_text(chat.id, id, text).await?;
-//         } else if let Some(id) = q.inline_message_id {
-//             bot.edit_message_text_inline(id, text).await?;
-//         }
-
-//         log::info!("You chose: {}", version);
-//     }
-
-//     Ok(())
-// }
 async fn callback_handler(
     clients: clients::Clients,
     bot: Bot,
@@ -105,32 +89,6 @@ async fn handle_message(clients: clients::Clients, message: Message) -> Response
     clients.handle_message(message).await?;
     Ok(())
 }
-
-// async fn handle_message(bot: Bot, msg: Message, me: Me) -> ResponseResult<()> {
-//     if let Some(text) = msg.text() {
-//         log::info!("Got text message: {}", text);
-//         match BotCommands::parse(text, me.username()) {
-//             Ok(common::Command::Help) => {
-//                 // Just send the description of all commands.
-//                 bot.send_message(msg.chat.id, common::Command::descriptions().to_string())
-//                     .await?;
-//             }
-//             Ok(common::Command::Start) => {
-//                 // Create a list of buttons and send them.
-//                 let keyboard = make_keyboard();
-//                 bot.send_message(msg.chat.id, "Debian versions:")
-//                     .reply_markup(keyboard)
-//                     .await?;
-//             }
-
-//             Err(_) => {
-//                 bot.send_message(msg.chat.id, "Command not found!").await?;
-//             }
-//         }
-//     }
-
-//     Ok(())
-// }
 
 fn make_keyboard() -> InlineKeyboardMarkup {
     let mut keyboard: Vec<Vec<InlineKeyboardButton>> = vec![];

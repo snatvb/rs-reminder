@@ -32,7 +32,7 @@ async fn main() {
         .expect("Failed to connect to database");
     let teloxide_token = env::var("TELOXIDE_TOKEN").expect("TELOXIDE_TOKEN must be set.");
     let last5 = &teloxide_token[teloxide_token.len() - 5..];
-    log::info!("Starting throw dice bot with token {}...", last5);
+    log::info!("Starting reminder bot with token {}...", last5);
 
     let bot = Bot::new(teloxide_token);
 

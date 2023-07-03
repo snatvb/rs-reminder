@@ -2,27 +2,6 @@ use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 use crate::key_value_enum;
 
-// #[derive(Debug, Clone, Copy, Hash)]
-// pub enum Button {
-//     AddWord,
-//     RemoveWord,
-//     ListWords,
-//     Cancel,
-// }
-
-// #[derive(Debug, Clone, Copy, Hash)]
-// #[keyboard_enum()]
-// pub enum Button {
-//     #[text = "Add word", key = "add_word"]
-//     AddWord,
-//     #[text = "Remove word", key = "remove_word"]
-//     RemoveWord,
-//     #[text = "List words", key = "list_words"]
-//     ListWords,
-//     #[text = "Cancel", key = "cancel"]
-//     Cancel,
-// }
-
 key_value_enum! {
     #[derive(Debug, Clone, Copy, Hash, PartialEq)]
     pub enum Button {

@@ -11,6 +11,8 @@ use crate::{
 
 use self::error::{StorageError, StorageResult};
 
+pub static MAX_WORDS_TO_REMIND: i64 = 100;
+
 #[derive(Debug)]
 pub struct Storage(prisma::PrismaClient);
 
@@ -110,6 +112,19 @@ impl Storage {
             .exec()
             .await?;
         Ok(())
+    }
+
+    pub async fn find_to_remind(&self) -> StorageResult<Vec<word::Data>> {
+        let now = Utc::now();
+        let fixed_now = now.with_timezone(&FixedOffset::east_opt(0).unwrap());
+        let words = self
+            .word()
+            .find_many(vec![word::next_remind_at::lte(fixed_now)])
+            .take(MAX_WORDS_TO_REMIND)
+            .exec()
+            .await?;
+
+        Ok(words)
     }
 }
 /* #endregion */

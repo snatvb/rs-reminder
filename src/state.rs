@@ -1,6 +1,7 @@
 pub mod add_translation;
 pub mod add_word;
 pub mod error;
+pub mod events;
 pub mod idle;
 pub mod remove_words;
 pub mod word_list;
@@ -21,7 +22,10 @@ use crate::{
     storage::{error::StorageError, Storage},
 };
 
-use self::error::{StateError, StateResult};
+use self::{
+    error::{StateError, StateResult},
+    events::Event,
+};
 
 #[derive(Debug)]
 pub struct FSM {
@@ -131,6 +135,10 @@ impl FSM {
         self.handle_new_state(new_state, current_state).await;
     }
 
+    pub async fn handle_event(&self, event: Event) {
+        let current_state = self.state.lock().await;
+    }
+
     fn is_cancel_cmd(&self, query: &CallbackQuery) -> bool {
         if let Some(Ok(cmd)) = query
             .data
@@ -230,6 +238,10 @@ pub trait State: Send + Sync + Debug {
         _: &Context,
         _: InlineQuery,
     ) -> StateResult<Box<dyn State>> {
+        Ok(self.clone_state())
+    }
+
+    async fn handle_event(&self, _: &Context, _: Event) -> StateResult<Box<dyn State>> {
         Ok(self.clone_state())
     }
 

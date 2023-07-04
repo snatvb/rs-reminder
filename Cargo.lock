@@ -3642,6 +3642,7 @@ dependencies = [
  "phf",
  "pretty_env_logger",
  "prisma-client-rust",
+ "rand 0.8.5",
  "serde",
  "teloxide",
  "thiserror",

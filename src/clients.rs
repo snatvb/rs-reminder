@@ -5,7 +5,11 @@ use teloxide::{
     types::{CallbackQuery, ChatId, Message},
 };
 
-use crate::{common::AsyncMutex, state, storage::Storage};
+use crate::{
+    common::AsyncMutex,
+    state::{self, events::Event},
+    storage::Storage,
+};
 
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -76,5 +80,28 @@ impl Clients {
         }
         log::debug!("Callback query handled");
         Ok(())
+    }
+
+    pub async fn handle_event(&self, event: Event) {
+        match event {
+            Event::Remind => self.remind().await,
+            _ => log::warn!("Unknown event: {:?}", event),
+        }
+    }
+
+    async fn remind(&self) {
+        log::debug!("Reminding");
+        let words = self.db.find_to_remind().await;
+        if let Err(err) = words {
+            log::error!("Error getting words to remind: {}", err);
+            return;
+        }
+        let words = words.unwrap();
+        log::debug!("Got words to remind: {:?}", words);
+        for word in words {
+            let chat_id = word.chat_id;
+            let client = self.get_or_insert(ChatId(chat_id)).await;
+            client.fsm.handle_event(Event::RemindWord(word)).await;
+        }
     }
 }

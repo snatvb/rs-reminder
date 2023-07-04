@@ -24,8 +24,10 @@ model Word {
 }
 
 model User {
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  chatId    BigInt   @id
-  words     Word[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  chatId       BigInt   @id
+  words        Word[]
+  remindEvery  Int      @default(1800) // 30 minutes
+  nextRemindAt DateTime @default(now())
 }

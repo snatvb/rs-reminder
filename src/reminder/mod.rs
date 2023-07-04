@@ -1,6 +1,6 @@
 use tokio::{signal, sync::mpsc};
 
-use crate::clients;
+use crate::{clients, state::events::Event};
 
 static EVERY: i64 = 10;
 
@@ -15,11 +15,16 @@ impl Reminder {
 }
 
 async fn wait_shot_down() {
-    let (_, mut shutdown_recv) = mpsc::unbounded_channel::<()>();
+    let (shutdown_send, mut shutdown_recv) = mpsc::unbounded_channel::<()>();
 
     tokio::select! {
-        _ = signal::ctrl_c() => {},
-        _ = shutdown_recv.recv() => {},
+        _ = signal::ctrl_c() => {
+            log::info!("Reminder shutdown by ctrl-c");
+            let _ = shutdown_send.send(()).unwrap();
+        },
+        _ = shutdown_recv.recv() => {
+            log::info!("Reminder shutdown");
+        },
     }
 }
 
@@ -27,12 +32,9 @@ impl Reminder {
     // start reminder - reminder every EVERY seconds and not block the thread
     pub async fn run(&mut self) {
         tokio::select! {
-            _ = self.start() => {
-            },
-            _ = wait_shot_down() => {
-            },
+            _ = self.start() => { },
+            _ = wait_shot_down() => { },
         }
-        self.start().await;
     }
 
     async fn start(&self) {
@@ -46,5 +48,6 @@ impl Reminder {
 
     pub async fn remind(&self) {
         log::debug!("Reminding");
+        self.clients.handle_event(Event::Remind).await;
     }
 }

@@ -1,17 +1,26 @@
 pub mod error;
 
+use rand::prelude::*;
 use std::ops::{Deref, DerefMut};
 
 use chrono::{FixedOffset, Utc};
 
 use crate::{
     common::config::TIMINGS,
-    prisma::{self, word},
+    prisma::{self, user, word},
 };
 
 use self::error::{StorageError, StorageResult};
 
-pub static MAX_WORDS_TO_REMIND: i64 = 100;
+pub static MAX_USERS_TO_REMIND: i64 = 200;
+
+// word::select!(word_to_remind {
+//     chat_id word translate remember_level
+// });
+
+user::include!((filters: Vec<word::WhereParam>) => word_to_remind {
+    words(filters)
+});
 
 #[derive(Debug)]
 pub struct Storage(prisma::PrismaClient);
@@ -117,12 +126,23 @@ impl Storage {
     pub async fn find_to_remind(&self) -> StorageResult<Vec<word::Data>> {
         let now = Utc::now();
         let fixed_now = now.with_timezone(&FixedOffset::east_opt(0).unwrap());
-        let words = self
-            .word()
-            .find_many(vec![word::next_remind_at::lte(fixed_now)])
-            .take(MAX_WORDS_TO_REMIND)
+        let word_filters = vec![word::next_remind_at::lte(fixed_now)];
+        let users = self
+            .user()
+            .find_many(vec![user::next_remind_at::lte(fixed_now)])
+            .take(MAX_USERS_TO_REMIND)
+            .include(word_to_remind::include(word_filters))
             .exec()
             .await?;
+        let words = users
+            .iter()
+            .map(|user| {
+                user.words
+                    .choose(&mut rand::thread_rng())
+                    .map(|w| w.clone())
+            })
+            .flatten()
+            .collect::<Vec<word::Data>>();
 
         Ok(words)
     }

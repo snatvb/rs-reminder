@@ -28,7 +28,11 @@ impl WordList {
 
 impl WordList {
     async fn get_words(&self, ctx: &super::Context, total_words: i64) -> StateResult<String> {
-        let offset = num::clamp(self.offset, 0, total_words - WORDS_PER_PAGE);
+        let offset = num::clamp(
+            self.offset,
+            0,
+            std::cmp::max(0, total_words - WORDS_PER_PAGE),
+        );
         let words = ctx
             .db
             .get_words(ctx.chat_id.0, offset, WORDS_PER_PAGE)

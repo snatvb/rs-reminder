@@ -10,6 +10,8 @@ use crate::{keyboard, state::remove_words};
 use super::{
     add_word,
     error::{StateError, StateResult},
+    events::Event,
+    remind::Remind,
     word_list, State,
 };
 
@@ -77,6 +79,13 @@ impl State for Idle {
             }
         }
         Ok(self.clone_state())
+    }
+
+    async fn handle_event(&self, _: &super::Context, event: Event) -> StateResult<Box<dyn State>> {
+        match event {
+            Event::RemindWord(word) => Ok(Box::new(Remind::new(word))),
+            _ => Ok(self.clone_state()),
+        }
     }
 
     fn clone_state(&self) -> Box<dyn State> {

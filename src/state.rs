@@ -3,6 +3,7 @@ pub mod add_word;
 pub mod error;
 pub mod events;
 pub mod idle;
+pub mod remind;
 pub mod remove_words;
 pub mod word_list;
 
@@ -137,6 +138,8 @@ impl FSM {
 
     pub async fn handle_event(&self, event: Event) {
         let current_state = self.state.lock().await;
+        let new_state = current_state.handle_event(&self.context, event).await;
+        self.handle_new_state(new_state, current_state).await;
     }
 
     fn is_cancel_cmd(&self, query: &CallbackQuery) -> bool {

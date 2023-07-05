@@ -58,7 +58,7 @@ impl Storage {
         }
 
         let now = Utc::now();
-        let first_remind = now + chrono::Duration::hours(TIMINGS.get(&0i32).unwrap().to_owned());
+        let first_remind = now + chrono::Duration::seconds(TIMINGS.get(&0i32).unwrap().to_owned());
         let first_remind = first_remind.with_timezone(&FixedOffset::east_opt(0).unwrap());
         let word = self
             .word()

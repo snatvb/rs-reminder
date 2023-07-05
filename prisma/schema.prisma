@@ -19,8 +19,8 @@ model Word {
   rememberLevel Int      @default(0)
   nextRemindAt  DateTime
   remindedAt    DateTime @default(now())
-  Users         User?    @relation(fields: [usersChatId], references: [chatId])
-  usersChatId   BigInt?
+  User          User     @relation(fields: [userChatId], references: [chatId])
+  userChatId    BigInt
 }
 
 model User {

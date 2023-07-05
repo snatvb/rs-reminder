@@ -80,7 +80,7 @@ impl Storage {
             return Err(StorageError::WordAlreadyExists);
         }
 
-        self.ensure_user(chat_id).await?;
+        let user = self.ensure_user(chat_id).await?;
 
         let now = Utc::now();
         let first_remind = now + chrono::Duration::seconds(TIMINGS.get(&0i32).unwrap().to_owned());
@@ -92,6 +92,7 @@ impl Storage {
                 word.to_owned(),
                 translation.to_owned(),
                 first_remind,
+                prisma::user::UniqueWhereParam::ChatIdEquals(user.chat_id),
                 vec![],
             )
             .exec()

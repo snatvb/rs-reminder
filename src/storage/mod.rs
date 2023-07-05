@@ -14,10 +14,6 @@ use self::error::{StorageError, StorageResult};
 
 pub static MAX_USERS_TO_REMIND: i64 = 200;
 
-// word::select!(word_to_remind {
-//     chat_id word translate remember_level
-// });
-
 user::include!((filters: Vec<word::WhereParam>) => word_to_remind {
     words(filters)
 });
@@ -45,6 +41,33 @@ impl Storage {
     }
 }
 
+/* #region User model */
+impl Storage {
+    pub async fn get_user(&self, chat_id: i64) -> StorageResult<Option<user::Data>> {
+        let user = self
+            .user()
+            .find_first(vec![user::chat_id::equals(chat_id)])
+            .exec()
+            .await?;
+        Ok(user)
+    }
+
+    pub async fn new_user(&self, chat_id: i64) -> StorageResult<user::Data> {
+        let user = self.user().create(chat_id, vec![]).exec().await?;
+        Ok(user)
+    }
+
+    pub async fn ensure_user(&self, chat_id: i64) -> StorageResult<user::Data> {
+        let user = self.get_user(chat_id).await?;
+        if let Some(user) = user {
+            Ok(user)
+        } else {
+            self.new_user(chat_id).await
+        }
+    }
+}
+/* #endregion */
+
 /* #region Word model */
 impl Storage {
     pub async fn new_word(
@@ -56,6 +79,8 @@ impl Storage {
         if self.has_word(chat_id, word).await? {
             return Err(StorageError::WordAlreadyExists);
         }
+
+        self.ensure_user(chat_id).await?;
 
         let now = Utc::now();
         let first_remind = now + chrono::Duration::seconds(TIMINGS.get(&0i32).unwrap().to_owned());
@@ -134,6 +159,8 @@ impl Storage {
             .include(word_to_remind::include(word_filters))
             .exec()
             .await?;
+
+        log::debug!("Found {} users to remind", users.len());
         let words = users
             .iter()
             .map(|user| {

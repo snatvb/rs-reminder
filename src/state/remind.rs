@@ -14,6 +14,7 @@ use crate::{
     keyboard,
     prisma::{self, user::next_remind_at},
     state::idle,
+    storage::LiteUser,
 };
 
 use super::{
@@ -24,11 +25,12 @@ use super::{
 #[derive(Debug, Clone)]
 pub struct Remind {
     word: prisma::word::Data,
+    user: LiteUser,
 }
 
 impl Remind {
-    pub fn new(word: prisma::word::Data) -> Remind {
-        Remind { word }
+    pub fn new(word: prisma::word::Data, user: LiteUser) -> Remind {
+        Remind { word, user }
     }
 }
 

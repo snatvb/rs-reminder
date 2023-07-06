@@ -1,6 +1,6 @@
 use teloxide::types::{CallbackQuery, Message};
 
-use crate::prisma;
+use crate::{prisma, storage::LiteUser};
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -8,4 +8,5 @@ pub enum Event {
     CallbackQuery(CallbackQuery),
     Remind,
     RemindWord(prisma::word::Data),
+    RemindWordToUser(prisma::word::Data, LiteUser),
 }

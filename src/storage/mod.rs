@@ -21,6 +21,23 @@ user::include!((filters: Vec<word::WhereParam>) => users_with_words {
     words(filters)
 });
 
+#[derive(Debug, Clone)]
+pub struct LiteUser {
+    pub chat_id: i64,
+    pub next_remind_at: DateTime<FixedOffset>,
+    pub remind_every: i32,
+}
+
+impl Into<LiteUser> for users_with_words::Data {
+    fn into(self) -> LiteUser {
+        LiteUser {
+            chat_id: self.chat_id,
+            next_remind_at: self.next_remind_at,
+            remind_every: self.remind_every,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Storage(prisma::PrismaClient);
 

@@ -104,21 +104,30 @@ impl Clients {
             Vec<users_with_words::Data>,
             Vec<users_with_words::Data>,
         ) = users.iter().cloned().partition(|u| u.words.is_empty());
-        let words = users_with_words
-            .iter()
-            .map(|user| {
-                user.words
-                    .choose(&mut rand::thread_rng())
-                    .map(|w| w.clone())
-            })
-            .flatten()
-            .collect::<Vec<prisma::word::Data>>();
+        // let words = users_with_words
+        //     .iter()
+        //     .map(|user| {
+        //         user.words
+        //             .choose(&mut rand::thread_rng())
+        //             .map(|w| w.clone())
+        //     })
+        //     .flatten()
+        //     .collect::<Vec<prisma::word::Data>>();
 
-        log::debug!("Got words to remind: {:?}", words);
-        for word in words {
-            let chat_id = word.chat_id;
-            let client = self.get_or_insert(ChatId(chat_id)).await;
-            client.fsm.handle_event(Event::RemindWord(word)).await;
+        log::debug!("Got users to remind: {:?}", users_with_words.len());
+        for user in users_with_words {
+            let word_opt = user
+                .words
+                .choose(&mut rand::thread_rng())
+                .map(|w| w.clone());
+            if let Some(word) = word_opt {
+                let chat_id = word.chat_id;
+                let client = self.get_or_insert(ChatId(chat_id)).await;
+                client
+                    .fsm
+                    .handle_event(Event::RemindWordToUser(word, user.into()))
+                    .await;
+            }
         }
 
         log::debug!("Got users without words: {}", no_words_users.len());

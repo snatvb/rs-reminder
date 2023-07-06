@@ -83,7 +83,7 @@ impl State for Idle {
 
     async fn handle_event(&self, _: &super::Context, event: Event) -> StateResult<Box<dyn State>> {
         match event {
-            Event::RemindWord(word) => Ok(Box::new(Remind::new(word))),
+            Event::RemindWordToUser(word, user) => Ok(Box::new(Remind::new(word, user))),
             _ => Ok(self.clone_state()),
         }
     }

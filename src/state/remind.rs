@@ -66,7 +66,7 @@ impl State for Remind {
 
                 let next_remind_at = calc_next_remind(level)?;
                 ctx.db
-                    .update_next_remind_word(self.word.id.clone(), next_remind_at)
+                    .update_word_remind(self.word.id.clone(), next_remind_at, level)
                     .await?;
                 let answer = format!(
                     "🎉 Correct\\! The translation is {}",

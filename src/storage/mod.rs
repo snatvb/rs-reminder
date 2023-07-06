@@ -175,15 +175,19 @@ impl Storage {
         Ok(())
     }
 
-    pub async fn update_next_remind_word(
+    pub async fn update_word_remind(
         &self,
         word_id: impl Into<String>,
         next_remind_at: DateTime<FixedOffset>,
+        new_level: i32,
     ) -> StorageResult<()> {
         self.word()
             .update(
                 word::id::equals(word_id.into()),
-                vec![word::next_remind_at::set(next_remind_at)],
+                vec![
+                    word::next_remind_at::set(next_remind_at),
+                    word::remember_level::set(new_level),
+                ],
             )
             .exec()
             .await?;

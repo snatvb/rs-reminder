@@ -64,6 +64,21 @@ impl Storage {
             self.new_user(chat_id).await
         }
     }
+
+    pub async fn update_next_remind(&self, id: i64, remind_every: i64) -> StorageResult<()> {
+        let now = Utc::now();
+        let next_remind_at = now + chrono::Duration::seconds(remind_every as i64);
+        let next_remind_at = next_remind_at.with_timezone(&FixedOffset::east_opt(0).unwrap());
+
+        self.user()
+            .update(
+                user::chat_id::equals(id),
+                vec![user::next_remind_at::set(next_remind_at)],
+            )
+            .exec()
+            .await?;
+        Ok(())
+    }
 }
 /* #endregion */
 

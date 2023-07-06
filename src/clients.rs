@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
 
-use log::debug;
 use rand::seq::SliceRandom;
 use teloxide::{
     requests::ResponseResult,
@@ -123,5 +122,14 @@ impl Clients {
         }
 
         log::debug!("Got users without words: {}", no_words_users.len());
+        for user in no_words_users {
+            let result = self
+                .db
+                .update_next_remind(user.chat_id, user.remind_every.into())
+                .await;
+            if let Err(err) = result {
+                log::error!("Error updating next remind: {}", err);
+            }
+        }
     }
 }

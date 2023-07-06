@@ -2,11 +2,15 @@ pub mod error;
 
 use std::ops::{Deref, DerefMut};
 
-use chrono::{FixedOffset, Utc};
+use chrono::{DateTime, FixedOffset, Utc};
 
 use crate::{
     common::config::TIMINGS,
-    prisma::{self, user, word},
+    prisma::{
+        self,
+        user::{self, next_remind_at},
+        word,
+    },
 };
 
 use self::error::{StorageError, StorageResult};
@@ -65,7 +69,7 @@ impl Storage {
         }
     }
 
-    pub async fn update_next_remind(&self, id: i64, remind_every: i64) -> StorageResult<()> {
+    pub async fn update_next_remind_user(&self, id: i64, remind_every: i64) -> StorageResult<()> {
         let now = Utc::now();
         let next_remind_at = now + chrono::Duration::seconds(remind_every as i64);
         let next_remind_at = next_remind_at.with_timezone(&FixedOffset::east_opt(0).unwrap());
@@ -158,6 +162,29 @@ impl Storage {
                 word::word::equals(word.to_owned()),
                 word::chat_id::equals(chat_id),
             ])
+            .exec()
+            .await?;
+        Ok(())
+    }
+
+    pub async fn remove_word_by_id(&self, word_id: impl Into<String>) -> StorageResult<()> {
+        self.word()
+            .delete(word::id::equals(word_id.into()))
+            .exec()
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_next_remind_word(
+        &self,
+        word_id: impl Into<String>,
+        next_remind_at: DateTime<FixedOffset>,
+    ) -> StorageResult<()> {
+        self.word()
+            .update(
+                word::id::equals(word_id.into()),
+                vec![word::next_remind_at::set(next_remind_at)],
+            )
             .exec()
             .await?;
         Ok(())

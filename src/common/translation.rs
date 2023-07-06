@@ -42,6 +42,10 @@ impl Translation {
             .collect::<Vec<String>>()
             .join(", ")
     }
+
+    pub fn check(&self, translation: &str) -> bool {
+        self.0.iter().any(|s| s.eq_ignore_ascii_case(translation))
+    }
 }
 
 impl From<&Translation> for String {

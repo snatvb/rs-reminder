@@ -15,6 +15,8 @@ pub enum StateError {
     UnexpectedCommand(String),
     #[error("Unexpected query")]
     UnexpectedQueryData(Option<String>, User),
+    #[error("Incorrect word level: `{0}`")]
+    IncorrectWordLevel(i32),
 }
 
 pub type StateResult<T> = std::result::Result<T, StateError>;

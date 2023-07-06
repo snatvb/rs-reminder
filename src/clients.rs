@@ -125,7 +125,7 @@ impl Clients {
         for user in no_words_users {
             let result = self
                 .db
-                .update_next_remind(user.chat_id, user.remind_every.into())
+                .update_next_remind_user(user.chat_id, user.remind_every.into())
                 .await;
             if let Err(err) = result {
                 log::error!("Error updating next remind: {}", err);

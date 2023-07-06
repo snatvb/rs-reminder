@@ -1,5 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
+use log::debug;
+use rand::seq::SliceRandom;
 use teloxide::{
     requests::ResponseResult,
     types::{CallbackQuery, ChatId, Message},
@@ -7,8 +9,9 @@ use teloxide::{
 
 use crate::{
     common::AsyncMutex,
+    prisma,
     state::{self, events::Event},
-    storage::Storage,
+    storage::{users_with_words, Storage},
 };
 
 #[derive(Debug, Clone)]
@@ -91,17 +94,34 @@ impl Clients {
 
     async fn remind(&self) {
         log::debug!("Reminding");
-        let words = self.db.find_to_remind().await;
-        if let Err(err) = words {
-            log::error!("Error getting words to remind: {}", err);
+        let users = self.db.find_to_remind().await;
+        if let Err(err) = users {
+            log::error!("Error getting users to remind: {}", err);
             return;
         }
-        let words = words.unwrap();
+        let users = users.unwrap();
+
+        let (no_words_users, users_with_words): (
+            Vec<users_with_words::Data>,
+            Vec<users_with_words::Data>,
+        ) = users.iter().cloned().partition(|u| u.words.is_empty());
+        let words = users_with_words
+            .iter()
+            .map(|user| {
+                user.words
+                    .choose(&mut rand::thread_rng())
+                    .map(|w| w.clone())
+            })
+            .flatten()
+            .collect::<Vec<prisma::word::Data>>();
+
         log::debug!("Got words to remind: {:?}", words);
         for word in words {
             let chat_id = word.chat_id;
             let client = self.get_or_insert(ChatId(chat_id)).await;
             client.fsm.handle_event(Event::RemindWord(word)).await;
         }
+
+        log::debug!("Got users without words: {}", no_words_users.len());
     }
 }

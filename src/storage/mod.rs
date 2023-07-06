@@ -1,6 +1,5 @@
 pub mod error;
 
-use rand::prelude::*;
 use std::ops::{Deref, DerefMut};
 
 use chrono::{FixedOffset, Utc};
@@ -14,7 +13,7 @@ use self::error::{StorageError, StorageResult};
 
 pub static MAX_USERS_TO_REMIND: i64 = 200;
 
-user::include!((filters: Vec<word::WhereParam>) => word_to_remind {
+user::include!((filters: Vec<word::WhereParam>) => users_with_words {
     words(filters)
 });
 
@@ -149,7 +148,7 @@ impl Storage {
         Ok(())
     }
 
-    pub async fn find_to_remind(&self) -> StorageResult<Vec<word::Data>> {
+    pub async fn find_to_remind(&self) -> StorageResult<Vec<users_with_words::Data>> {
         let now = Utc::now();
         let fixed_now = now.with_timezone(&FixedOffset::east_opt(0).unwrap());
         let word_filters = vec![word::next_remind_at::lte(fixed_now)];
@@ -157,22 +156,13 @@ impl Storage {
             .user()
             .find_many(vec![user::next_remind_at::lte(fixed_now)])
             .take(MAX_USERS_TO_REMIND)
-            .include(word_to_remind::include(word_filters))
+            .include(users_with_words::include(word_filters))
             .exec()
             .await?;
 
         log::debug!("Found {} users to remind", users.len());
-        let words = users
-            .iter()
-            .map(|user| {
-                user.words
-                    .choose(&mut rand::thread_rng())
-                    .map(|w| w.clone())
-            })
-            .flatten()
-            .collect::<Vec<word::Data>>();
 
-        Ok(words)
+        Ok(users)
     }
 }
 /* #endregion */

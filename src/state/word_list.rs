@@ -39,7 +39,10 @@ impl WordList {
             .await?;
         let mut text = String::new();
         for word in words {
-            text.push_str(&format!("{} \\- `{}`\n", word.word, word.translate));
+            text.push_str(&format!(
+                "{} \\- `{}` \\(level: *{}*\\)\n",
+                word.word, word.translate, word.remember_level
+            ));
         }
         Ok(text)
     }

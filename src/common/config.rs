@@ -1,9 +1,9 @@
 use phf::phf_map;
 
-#[cfg(release)]
+#[cfg(not(debug_assertions))]
 static ONE_HOUR: i64 = 1 * 60 * 60;
 
-#[cfg(release)]
+#[cfg(not(debug_assertions))]
 pub static TIMINGS: phf::Map<i32, i64> = phf_map! {
   0i32 => ONE_HOUR,
   1i32 => ONE_HOUR * 12,

@@ -9,12 +9,16 @@ pub enum StateError {
     StorageError(#[from] StorageError),
     #[error("Request bot error")]
     RequestError(#[from] teloxide::RequestError),
+    #[error("Expected message inside callback query")]
+    ExpectedMessageInsideCallbackQuery,
     #[error("Word already exists")]
     WordAlreadyExists,
     #[error("Unexpected command")]
     UnexpectedCommand(String),
     #[error("Unexpected query")]
     UnexpectedQueryData(Option<String>, User),
+    #[error("Unexpected event")]
+    UnexpectedEvent(String),
     #[error("Incorrect word level: `{0}`")]
     IncorrectWordLevel(i32),
 }

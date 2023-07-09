@@ -2,10 +2,13 @@ use async_trait::async_trait;
 use teloxide::{
     payloads::{EditMessageTextSetters, SendMessageSetters},
     requests::Requester,
-    types::Message,
+    types::{CallbackQuery, Message},
 };
 
-use crate::{keyboard, state::remove_words};
+use crate::{
+    keyboard::{self, Button},
+    state::remove_words,
+};
 
 use super::{
     add_word,
@@ -33,6 +36,43 @@ impl Idle {
 
         Ok(())
     }
+
+    async fn handle_cmd(
+        &self,
+        ctx: &super::Context,
+        button: Button,
+        query: CallbackQuery,
+    ) -> StateResult<Box<dyn State>> {
+        let msg = query
+            .message
+            .ok_or(StateError::ExpectedMessageInsideCallbackQuery)?;
+        match button {
+            keyboard::Button::AddWord => {
+                ctx.bot
+                    .edit_message_text(msg.chat.id, msg.id, "Write a word for translation")
+                    .reply_markup(keyboard::Button::Cancel.to_keyboard())
+                    .await?;
+                return Ok(Box::new(add_word::AddWord::new()));
+            }
+            keyboard::Button::ListWords => {
+                return Ok(Box::new(word_list::WordList::new(Some(msg.id), 0)));
+            }
+            keyboard::Button::RemoveWord => {
+                ctx.bot
+                    .edit_message_text(msg.chat.id, msg.id, "Write a word for removing")
+                    .reply_markup(keyboard::Button::Cancel.to_keyboard())
+                    .await?;
+                return Ok(Box::new(remove_words::RemoveWords::new()));
+            }
+            _ => {
+                return Err(StateError::UnexpectedCommand(format!(
+                    "Unexpected command: {} - {}",
+                    button.key(),
+                    button.text()
+                )));
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -43,47 +83,14 @@ impl State for Idle {
         Ok(())
     }
 
-    async fn handle_callback_query(
+    async fn handle_event(
         &self,
         ctx: &super::Context,
-        query: teloxide::types::CallbackQuery,
+        event: Event,
     ) -> StateResult<Box<dyn State>> {
-        log::info!("Callback query in {}: {:?}", self.name(), query.data);
-        let request = (keyboard::Button::from_option_key(query.data), query.message);
-        if let (Ok(button), Some(Message { id, chat, .. })) = request {
-            match button {
-                keyboard::Button::AddWord => {
-                    ctx.bot
-                        .edit_message_text(chat.id, id, "Write a word for translation")
-                        .reply_markup(keyboard::Button::Cancel.to_keyboard())
-                        .await?;
-                    return Ok(Box::new(add_word::AddWord::new()));
-                }
-                keyboard::Button::ListWords => {
-                    return Ok(Box::new(word_list::WordList::new(Some(id), 0)));
-                }
-                keyboard::Button::RemoveWord => {
-                    ctx.bot
-                        .edit_message_text(chat.id, id, "Write a word for removing")
-                        .reply_markup(keyboard::Button::Cancel.to_keyboard())
-                        .await?;
-                    return Ok(Box::new(remove_words::RemoveWords::new()));
-                }
-                _ => {
-                    return Err(StateError::UnexpectedCommand(format!(
-                        "Unexpected command: {} - {}",
-                        button.key(),
-                        button.text()
-                    )));
-                }
-            }
-        }
-        Ok(self.clone_state())
-    }
-
-    async fn handle_event(&self, _: &super::Context, event: Event) -> StateResult<Box<dyn State>> {
         match event {
             Event::RemindWordToUser(word, user) => Ok(Box::new(Remind::new(word, user))),
+            Event::Button(button, query) => self.handle_cmd(ctx, button, query).await,
             _ => Ok(self.clone_state()),
         }
     }

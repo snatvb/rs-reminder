@@ -9,6 +9,7 @@ use crate::keyboard;
 
 use super::{
     error::{StateError, StateResult},
+    events::Event,
     State,
 };
 
@@ -102,12 +103,13 @@ impl State for WordList {
         self.update_list(ctx).await
     }
 
-    async fn handle_callback_query(
+    async fn handle_event(
         &self,
+
         ctx: &super::Context,
-        query: teloxide::types::CallbackQuery,
+        event: Event,
     ) -> StateResult<Box<dyn State>> {
-        if let Ok(cmd) = keyboard::Button::from_option_key(query.data.clone()) {
+        if let Event::Button(cmd, _) = event {
             return match cmd {
                 keyboard::Button::NextPage => self.next_page(ctx).await,
                 keyboard::Button::PrevPage => self.prev_page(ctx).await,
@@ -119,7 +121,7 @@ impl State for WordList {
             };
         }
 
-        Err(StateError::UnexpectedQueryData(query.data, query.from))
+        Ok(self.clone_state())
     }
 
     fn clone_state(&self) -> Box<dyn State> {

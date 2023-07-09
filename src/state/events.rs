@@ -1,11 +1,11 @@
 use teloxide::types::{CallbackQuery, Message};
 
-use crate::{prisma, storage::LiteUser};
+use crate::{keyboard::Button, prisma, storage::LiteUser};
 
 #[derive(Debug, Clone)]
 pub enum Event {
     Message(Message),
-    CallbackQuery(CallbackQuery),
+    Button(Button, CallbackQuery),
     Remind,
     RemindWord(prisma::word::Data),
     RemindWordToUser(prisma::word::Data, LiteUser),

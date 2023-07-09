@@ -8,7 +8,6 @@ use teloxide::{
 
 use crate::{
     common::AsyncMutex,
-    prisma,
     state::{self, events::Event},
     storage::{users_with_words, Storage},
 };

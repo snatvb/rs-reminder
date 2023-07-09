@@ -121,19 +121,33 @@ impl FSM {
 
     pub async fn handle_callback_query(&self, callback_query: CallbackQuery) {
         let current_state = self.state.lock().await;
-        if self.is_cancel_cmd(&callback_query) {
-            self.handle_new_state(Ok(Box::new(idle::Idle::new())), current_state)
-                .await;
-            if let Some(Message { id, chat, .. }) = callback_query.message {
-                let _ = self.context.bot.delete_message(chat.id, id).await;
-            }
-            return;
-        };
 
-        let new_state = current_state
-            .handle_callback_query(&self.context, callback_query)
-            .await;
-        self.handle_new_state(new_state, current_state).await;
+        if let Some(Ok(cmd)) = callback_query
+            .data
+            .to_owned()
+            .map(|text| keyboard::Button::from_key(&text))
+        {
+            match cmd {
+                keyboard::Button::Cancel => {
+                    self.handle_new_state(Ok(Box::new(idle::Idle::new())), current_state)
+                        .await;
+                    if let Some(Message { id, chat, .. }) = callback_query.message {
+                        let _ = self.context.bot.delete_message(chat.id, id).await;
+                    }
+                }
+                _ => {
+                    let new_state = current_state
+                        .handle_event(&self.context, events::Event::Button(cmd, callback_query))
+                        .await;
+                    self.handle_new_state(new_state, current_state).await;
+                }
+            }
+        } else {
+            let new_state = current_state
+                .handle_callback_query(&self.context, callback_query)
+                .await;
+            self.handle_new_state(new_state, current_state).await;
+        }
     }
 
     pub async fn handle_event(&self, event: Event) {

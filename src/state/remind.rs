@@ -9,18 +9,16 @@ use teloxide::{
 };
 
 use crate::{
-    common::{
-        config::TIMINGS,
-        translation::{self, Translation},
-    },
+    common::{config::TIMINGS, translation::Translation},
     keyboard,
-    prisma::{self, user::next_remind_at},
+    prisma::{self},
     state::idle,
     storage::LiteUser,
 };
 
 use super::{
     error::{StateError, StateResult},
+    events::Event,
     State,
 };
 
@@ -130,6 +128,42 @@ impl State for Remind {
                 .await?;
             Ok(Box::new(idle::Idle::new()))
         }
+    }
+
+    async fn handle_event(
+        &self,
+        ctx: &super::Context,
+        event: Event,
+    ) -> StateResult<Box<dyn State>> {
+        if let Event::Button(cmd, query) = event {
+            let msg = query
+                .message
+                .ok_or(StateError::ExpectedMessageInsideCallbackQuery)?;
+            return match cmd {
+                keyboard::Button::Forgot => {
+                    let translation = Translation::new(&self.word.translate);
+                    self.handle_incorrect_answer(ctx).await?;
+                    let answer = format!(
+                        "😔 Oh\\! `{}` translation is {}",
+                        self.word.word,
+                        translation.to_formatted_string()
+                    );
+                    ctx.bot.delete_message(msg.chat.id, msg.id).await?;
+                    ctx.bot
+                        .send_message(msg.chat.id, answer)
+                        .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                        .await?;
+                    Ok(Box::new(idle::Idle::new()))
+                }
+                _ => Err(StateError::UnexpectedCommand(format!(
+                    "Unexpected command {} - {}",
+                    cmd.key(),
+                    cmd.text(),
+                ))),
+            };
+        }
+
+        Ok(self.clone_state())
     }
 
     fn clone_state(&self) -> Box<dyn State> {

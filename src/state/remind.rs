@@ -1,3 +1,5 @@
+use std::cmp;
+
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset, Utc};
 use teloxide::{
@@ -33,6 +35,21 @@ impl Remind {
         Remind { word, user }
     }
 
+    async fn update_next_reminds(
+        &self,
+        ctx: &super::Context,
+        next_remind_at: DateTime<FixedOffset>,
+        level: i32,
+    ) -> StateResult<()> {
+        ctx.db
+            .update_word_remind(self.word.id.clone(), next_remind_at, level)
+            .await?;
+        ctx.db
+            .update_next_remind_user(self.user.chat_id, self.user.remind_every as i64)
+            .await?;
+        Ok(())
+    }
+
     async fn handle_correct_answer(
         &self,
         ctx: &super::Context,
@@ -50,12 +67,7 @@ impl Remind {
         }
 
         let next_remind_at = calc_next_remind(level)?;
-        ctx.db
-            .update_word_remind(self.word.id.clone(), next_remind_at, level)
-            .await?;
-        ctx.db
-            .update_next_remind_user(self.user.chat_id, self.user.remind_every as i64)
-            .await?;
+        self.update_next_reminds(ctx, next_remind_at, level).await?;
         let answer = format!(
             "🎉 Correct\\! The translation is {}",
             translation.to_formatted_string()
@@ -64,6 +76,13 @@ impl Remind {
             .send_message(msg.chat.id, answer)
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
             .await?;
+        Ok(Box::new(idle::Idle::new()))
+    }
+
+    async fn handle_incorrect_answer(&self, ctx: &super::Context) -> StateResult<Box<dyn State>> {
+        let next_remind_at = calc_next_remind(TIMINGS[&0i32].to_owned() as i32)?;
+        let level = cmp::max(self.word.remember_level - 1, 0);
+        self.update_next_reminds(ctx, next_remind_at, level).await?;
         Ok(Box::new(idle::Idle::new()))
     }
 }
@@ -77,6 +96,7 @@ impl State for Remind {
                 format!("Write translation for the word `{}`", self.word.word),
             )
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .reply_markup(keyboard::Button::Forgot.to_keyboard())
             .await?;
         Ok(())
     }
@@ -92,6 +112,7 @@ impl State for Remind {
             if translation.check(&translation_request) {
                 self.handle_correct_answer(ctx, &msg, &translation).await
             } else {
+                self.handle_incorrect_answer(ctx).await?;
                 let answer = format!(
                     "😔 Wrong\\! The translation is {}",
                     translation.to_formatted_string()

@@ -11,6 +11,7 @@ key_value_enum! {
         Cancel { text: "Cancel", key: "cancel" },
         PrevPage { text: "←", key: "prev_page" },
         NextPage { text: "→", key: "next_page" },
+        Forgot { text: "Forgot", key: "forgot" },
     }
 }
 

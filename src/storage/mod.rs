@@ -8,7 +8,7 @@ use crate::{
     common::config::TIMINGS,
     prisma::{
         self,
-        user::{self, next_remind_at},
+        user::{self},
         word,
     },
 };
@@ -90,6 +90,7 @@ impl Storage {
         let now = Utc::now();
         let next_remind_at = now + chrono::Duration::seconds(remind_every as i64);
         let next_remind_at = next_remind_at.with_timezone(&FixedOffset::east_opt(0).unwrap());
+        log::debug!("Next remind user {}: {:?}", id, next_remind_at);
 
         self.user()
             .update(

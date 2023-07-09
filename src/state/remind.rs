@@ -32,6 +32,40 @@ impl Remind {
     pub fn new(word: prisma::word::Data, user: LiteUser) -> Remind {
         Remind { word, user }
     }
+
+    async fn handle_correct_answer(
+        &self,
+        ctx: &super::Context,
+        msg: &Message,
+        translation: &Translation,
+    ) -> StateResult<Box<dyn State>> {
+        let level = self.word.remember_level + 1;
+
+        if level >= TIMINGS.len() as i32 {
+            ctx.db.remove_word_by_id(self.word.id.clone()).await?;
+            ctx.bot
+                .send_message(msg.chat.id, "🎉 Success! You have remembered the word! 🎊")
+                .await?;
+            return Ok(Box::new(idle::Idle::new()));
+        }
+
+        let next_remind_at = calc_next_remind(level)?;
+        ctx.db
+            .update_word_remind(self.word.id.clone(), next_remind_at, level)
+            .await?;
+        ctx.db
+            .update_next_remind_user(self.user.chat_id, self.user.remind_every as i64)
+            .await?;
+        let answer = format!(
+            "🎉 Correct\\! The translation is {}",
+            translation.to_formatted_string()
+        );
+        ctx.bot
+            .send_message(msg.chat.id, answer)
+            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .await?;
+        Ok(Box::new(idle::Idle::new()))
+    }
 }
 
 #[async_trait]
@@ -56,29 +90,7 @@ impl State for Remind {
             let translation_request = text.to_owned();
             let translation = Translation::new(&self.word.translate);
             if translation.check(&translation_request) {
-                let level = self.word.remember_level + 1;
-
-                if level >= TIMINGS.len() as i32 {
-                    ctx.db.remove_word_by_id(self.word.id.clone()).await?;
-                    ctx.bot
-                        .send_message(msg.chat.id, "🎉 Success! You have remembered the word! 🎊")
-                        .await?;
-                    return Ok(Box::new(idle::Idle::new()));
-                }
-
-                let next_remind_at = calc_next_remind(level)?;
-                ctx.db
-                    .update_word_remind(self.word.id.clone(), next_remind_at, level)
-                    .await?;
-                let answer = format!(
-                    "🎉 Correct\\! The translation is {}",
-                    translation.to_formatted_string()
-                );
-                ctx.bot
-                    .send_message(msg.chat.id, answer)
-                    .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                    .await?;
-                Ok(Box::new(idle::Idle::new()))
+                self.handle_correct_answer(ctx, &msg, &translation).await
             } else {
                 let answer = format!(
                     "😔 Wrong\\! The translation is {}",

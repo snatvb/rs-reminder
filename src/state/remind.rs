@@ -80,7 +80,7 @@ impl Remind {
     }
 
     async fn handle_incorrect_answer(&self, ctx: &super::Context) -> StateResult<Box<dyn State>> {
-        let next_remind_at = calc_next_remind(TIMINGS[&0i32].to_owned() as i32)?;
+        let next_remind_at = calc_next_remind(0)?;
         let level = cmp::max(self.word.remember_level - 1, 0);
         self.update_next_reminds(ctx, next_remind_at, level).await?;
         Ok(Box::new(idle::Idle::new()))

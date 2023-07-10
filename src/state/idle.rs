@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use teloxide::{
     payloads::{EditMessageTextSetters, SendMessageSetters},
     requests::Requester,
-    types::{CallbackQuery, Message},
+    types::CallbackQuery,
 };
 
 use crate::{

@@ -156,17 +156,6 @@ impl FSM {
         self.handle_new_state(new_state, current_state).await;
     }
 
-    fn is_cancel_cmd(&self, query: &CallbackQuery) -> bool {
-        if let Some(Ok(cmd)) = query
-            .data
-            .to_owned()
-            .map(|text| keyboard::Button::from_key(&text))
-        {
-            return cmd == keyboard::Button::Cancel;
-        }
-        return false;
-    }
-
     async fn handle_new_state(
         &self,
         new_state: StateResult<Box<dyn State>>,

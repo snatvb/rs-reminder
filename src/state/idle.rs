@@ -28,7 +28,7 @@ impl Idle {
 }
 
 impl Idle {
-    async fn send_start_msg(&self, ctx: &super::Context) -> StateResult<()> {
+    pub async fn send_start_msg(ctx: &super::Context) -> StateResult<()> {
         ctx.bot
             .send_message(ctx.chat_id, "Chose action")
             .reply_markup(keyboard::words_actions())
@@ -77,9 +77,15 @@ impl Idle {
 
 #[async_trait]
 impl State for Idle {
-    async fn on_enter(&self, ctx: &super::Context, _: Option<Box<dyn State>>) -> StateResult<()> {
+    async fn on_enter(
+        &self,
+        ctx: &super::Context,
+        from: Option<Box<dyn State>>,
+    ) -> StateResult<()> {
         log::debug!("Entered {} state", self.name());
-        self.send_start_msg(ctx).await?;
+        if from.is_some() {
+            Idle::send_start_msg(ctx).await?;
+        }
         Ok(())
     }
 

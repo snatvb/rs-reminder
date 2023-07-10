@@ -103,15 +103,6 @@ impl Clients {
             Vec<users_with_words::Data>,
             Vec<users_with_words::Data>,
         ) = users.iter().cloned().partition(|u| u.words.is_empty());
-        // let words = users_with_words
-        //     .iter()
-        //     .map(|user| {
-        //         user.words
-        //             .choose(&mut rand::thread_rng())
-        //             .map(|w| w.clone())
-        //     })
-        //     .flatten()
-        //     .collect::<Vec<prisma::word::Data>>();
 
         log::debug!("Got users to remind: {:?}", users_with_words.len());
         for user in users_with_words {

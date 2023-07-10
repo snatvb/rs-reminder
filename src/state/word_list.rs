@@ -105,7 +105,6 @@ impl State for WordList {
 
     async fn handle_event(
         &self,
-
         ctx: &super::Context,
         event: Event,
     ) -> StateResult<Box<dyn State>> {

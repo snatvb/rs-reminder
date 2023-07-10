@@ -73,7 +73,7 @@ impl FSM {
                 let current_state = self.state.lock().await;
                 let idle_state = idle::Idle::new();
                 if current_state.name() == idle_state.name() {
-                    current_state.on_enter(&self.context, None).await?;
+                    idle::Idle::send_start_msg(&self.context).await?;
                 } else {
                     self.change_state(current_state, Box::new(idle_state)).await;
                 }

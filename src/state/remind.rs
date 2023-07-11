@@ -101,7 +101,8 @@ impl State for Remind {
     }
 
     fn timeout(&self) -> Option<time::Duration> {
-        Some(time::Duration::from_secs(60 * 2)) // 2 minutes
+        // Some(time::Duration::from_secs(60 * 2)) // 2 minutes
+        Some(time::Duration::from_secs(12))
     }
 
     async fn handle_message(
@@ -169,6 +170,21 @@ impl State for Remind {
         }
 
         Ok(self.clone_state())
+    }
+
+    async fn handle_timeout(&self, ctx: &super::Context) -> StateResult<Box<dyn State>> {
+        let now = Utc::now();
+        let next_remind_at = calc_next_remind(0)?;
+        self.update_next_reminds(ctx, next_remind_at, 0).await?;
+        let answer = format!(
+            "Ok\\, I will remind in `{:?}`",
+            time::Duration::from_secs((next_remind_at.time() - now.time()).num_seconds() as u64)
+        );
+        ctx.bot
+            .send_message(ChatId(self.user.chat_id), answer)
+            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .await?;
+        Ok(Box::new(idle::Idle::new()))
     }
 
     fn clone_state(&self) -> Box<dyn State> {

@@ -148,8 +148,15 @@ impl FSM {
             tokio::time::sleep(timeout_duration).await;
             log::info!("Timeout expired");
             let current_state = me.state.lock().await;
-            me.translate_state(current_state, Box::new(idle::Idle::new()))
-                .await;
+            let new_state = current_state.handle_timeout(&me.context).await;
+            match new_state {
+                Ok(new_state) => me.translate_state(current_state, new_state).await,
+                Err(error) => {
+                    me.handle_failure(error).await;
+                    me.translate_state(current_state, Box::new(idle::Idle::new()))
+                        .await;
+                }
+            }
         }));
     }
 
@@ -296,6 +303,10 @@ pub trait State: Send + Sync + Debug {
 
     async fn handle_event(&self, _: &Context, _: Event) -> StateResult<Box<dyn State>> {
         Ok(self.clone_state())
+    }
+
+    async fn handle_timeout(&self, _: &Context) -> StateResult<Box<dyn State>> {
+        Ok(Box::new(idle::Idle::new()))
     }
 
     fn clone_state(&self) -> Box<dyn State>;

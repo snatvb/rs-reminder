@@ -1,3 +1,5 @@
+use std::time;
+
 use async_trait::async_trait;
 use teloxide::{
     payloads::{EditMessageTextSetters, SendMessageSetters},
@@ -29,10 +31,12 @@ impl Idle {
 
 impl Idle {
     pub async fn send_start_msg(ctx: &super::Context) -> StateResult<()> {
+        log::debug!("Send start message...");
         ctx.bot
             .send_message(ctx.chat_id, "Chose action")
             .reply_markup(keyboard::words_actions())
             .await?;
+        log::debug!("SUCCESS: Send start message");
 
         Ok(())
     }
@@ -82,11 +86,19 @@ impl State for Idle {
         ctx: &super::Context,
         from: Option<Box<dyn State>>,
     ) -> StateResult<()> {
-        log::debug!("Entered {} state", self.name());
+        log::debug!(
+            "Entered {} state from {:?}",
+            self.name(),
+            from.clone().map(|s| s.name())
+        );
         if from.is_some() {
             Idle::send_start_msg(ctx).await?;
         }
         Ok(())
+    }
+
+    fn timeout(&self) -> Option<time::Duration> {
+        None
     }
 
     async fn handle_event(

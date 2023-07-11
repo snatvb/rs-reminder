@@ -8,8 +8,8 @@ pub mod remove_words;
 pub mod word_list;
 
 use async_trait::async_trait;
-use std::{fmt::Debug, sync::Arc};
-use tokio::sync::MutexGuard;
+use std::{fmt::Debug, sync::Arc, time};
+use tokio::{sync::MutexGuard, task::JoinHandle};
 
 use teloxide::{
     requests::Requester,
@@ -28,17 +28,22 @@ use self::{
     events::Event,
 };
 
-#[derive(Debug)]
+const DEFAULT_STATE_TIMEOUT: u64 = 60; // seconds
+
+#[derive(Debug, Clone)]
 pub struct FSM {
-    pub state: AsyncMutex<Box<dyn State>>,
+    pub state: Arc<AsyncMutex<Box<dyn State>>>,
     pub context: Arc<Context>,
+
+    timeout: Arc<AsyncMutex<Option<JoinHandle<()>>>>,
 }
 
 impl FSM {
     pub fn new(state: Box<dyn State>, context: Context) -> Self {
         Self {
-            state: AsyncMutex::new(state),
+            state: Arc::new(AsyncMutex::new(state)),
             context: Arc::new(context),
+            timeout: Arc::new(AsyncMutex::new(None)),
         }
     }
 
@@ -100,23 +105,61 @@ impl FSM {
 
     async fn change_state(
         &self,
+        current_state: MutexGuard<'_, Box<dyn State>>,
+        new_state: Box<dyn State>,
+    ) {
+        let updated_state = current_state.name() != new_state.name();
+        if updated_state == false {
+            return;
+        }
+
+        self.abort_timeout().await;
+        let timeout_duration = new_state.timeout();
+        self.translate_state(current_state, new_state).await;
+
+        if let Some(timeout_duration) = timeout_duration {
+            log::debug!("Setting timeout to {:?}", timeout_duration);
+            self.set_timeout(timeout_duration).await;
+        }
+    }
+
+    async fn translate_state(
+        &self,
         mut current_state: MutexGuard<'_, Box<dyn State>>,
         new_state: Box<dyn State>,
     ) {
-        if current_state.name() != new_state.name() {
-            let old_state = current_state.clone_state();
-            let handled = new_state.on_enter(&self.context, Some(old_state)).await;
-            if let Err(error) = handled {
-                self.handle_failure(error).await;
-            }
+        let old_state = current_state.clone_state();
+        let handled = new_state.on_enter(&self.context, Some(old_state)).await;
+        if let Err(error) = handled {
+            self.handle_failure(error).await;
         }
-
         log::info!(
             "Transitioned from {} to {}",
             current_state.name(),
             new_state.name()
         );
         *current_state = new_state;
+    }
+
+    async fn set_timeout(&self, timeout_duration: time::Duration) {
+        let me = self.clone();
+        let mut timeout = self.timeout.lock().await;
+        *timeout = Some(tokio::spawn(async move {
+            tokio::time::sleep(timeout_duration).await;
+            log::info!("Timeout expired");
+            let current_state = me.state.lock().await;
+            me.translate_state(current_state, Box::new(idle::Idle::new()))
+                .await;
+        }));
+    }
+
+    async fn abort_timeout(&self) {
+        let mut timeout = self.timeout.lock().await;
+        if let Some(timeout) = timeout.as_mut() {
+            log::debug!("Cancelling timeout");
+            timeout.abort();
+        }
+        *timeout = None;
     }
 
     pub async fn handle_callback_query(&self, callback_query: CallbackQuery) {
@@ -221,6 +264,10 @@ impl Context {
 pub trait State: Send + Sync + Debug {
     fn name(&self) -> &'static str {
         std::any::type_name::<Self>()
+    }
+
+    fn timeout(&self) -> Option<time::Duration> {
+        Some(time::Duration::from_secs(DEFAULT_STATE_TIMEOUT))
     }
 
     async fn on_enter(&self, _: &Context, _: Option<Box<dyn State>>) -> StateResult<()> {

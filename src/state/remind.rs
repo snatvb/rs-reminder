@@ -1,3 +1,4 @@
+use core::time;
 use std::cmp;
 
 use async_trait::async_trait;
@@ -97,6 +98,10 @@ impl State for Remind {
             .reply_markup(keyboard::Button::Forgot.to_keyboard())
             .await?;
         Ok(())
+    }
+
+    fn timeout(&self) -> Option<time::Duration> {
+        Some(time::Duration::from_secs(60 * 2)) // 2 minutes
     }
 
     async fn handle_message(
